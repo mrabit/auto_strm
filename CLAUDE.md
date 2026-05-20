@@ -15,7 +15,7 @@ cd app && npm install
 # Dev mode with auto-reload (reads config/dev.json)
 cd app && npm run dev
 
-# Type-check and compile
+# Type-check and compile (runs lint then tsc)
 cd app && npm run build
 
 # Run compiled output
@@ -47,7 +47,7 @@ app/
 
 ## Config schema
 
-Top-level `remote` provides common connection config shared across tasks. Each task can override any field via its own `remote`. If top-level `remote` is omitted, each task must supply all required fields.
+Top-level `remote`, `cron`, and `rateLimit` provide common defaults shared across tasks. Each task can override any field. If top-level defaults are omitted, each task must supply all required fields.
 
 ```jsonc
 {
@@ -56,6 +56,11 @@ Top-level `remote` provides common connection config shared across tasks. Each t
     "username": "your-account",
     "password": "your-password",
     "publicUrl": "https://your-server.com"  // optional: override streaming host
+  },
+  "cron": "0 */6 * * *",            // optional: common cron, tasks inherit if omitted
+  "rateLimit": {                     // optional: common rate limit defaults
+    "concurrency": 5,                // default 5
+    "intervalMs": 200                // default 200ms between requests
   },
   "tasks": [
     {
@@ -66,7 +71,11 @@ Top-level `remote` provides common connection config shared across tasks. Each t
         // url/username/password can be overridden per task if needed
       },
       "local": { "path": "./data/example" },
-      "cron": "0 */6 * * *"
+      "cron": "0 */6 * * *",          // optional if top-level cron is set
+      "rateLimit": {                  // optional: per-task override
+        "concurrency": 3,
+        "intervalMs": 500
+      }
     }
   ]
 }
@@ -83,6 +92,11 @@ interface RemoteConfig {
   syncMetadata?: boolean; // default true
 }
 
+interface RateLimitConfig {
+  concurrency: number; // default 5
+  intervalMs: number;  // default 200
+}
+
 // After merge (TaskConfig) — all required fields guaranteed present
 interface ResolvedRemoteConfig {
   url: string;
@@ -92,9 +106,19 @@ interface ResolvedRemoteConfig {
   publicUrl?: string;
   syncMetadata?: boolean;
 }
+
+interface TaskConfig {
+  name: string;
+  remote: ResolvedRemoteConfig;
+  local: LocalConfig;
+  cron: string;
+  rateLimit: RateLimitConfig;
+}
 ```
 
 Merge: `{ ...commonRemote, ...taskRemote }` — task values take precedence.
+Cron merge: `task.cron || commonCron` — task wins, falls back to top-level.
+Rate limit merge: `DEFAULT → top-level rateLimit → task rateLimit` — each field merges independently.
 
 ## .strm URL format
 
@@ -109,7 +133,7 @@ CloudDrive2 streaming format: `{base}/static/{proto}/{host}/False{encodedRemoteP
 
 ## Concurrency
 
-Metadata downloads and strm generation run concurrently within each task (default 10 workers, see `CONCURRENCY` in `index.ts`).
+Metadata downloads and strm generation run concurrently within each task. Controlled by `rateLimit.concurrency` (default 5). Each worker pauses `rateLimit.intervalMs` (default 200ms) between items to avoid triggering server rate limits.
 
 ## Key types
 

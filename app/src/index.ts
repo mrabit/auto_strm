@@ -6,7 +6,9 @@ import { start } from './scheduler';
 import type { SchedulerHandle } from './scheduler';
 import type { TaskConfig } from './config';
 
-const CONCURRENCY = 10;
+function delay(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 const C = {
   reset: '\x1b[0m',
@@ -53,7 +55,11 @@ async function runTask(task: TaskConfig): Promise<void> {
       password: task.remote.password,
     });
 
-    const { metadataFiles, videoFiles } = await scan(client, task.remote.path);
+    const { metadataFiles, videoFiles } = await scan(
+      client,
+      task.remote.path,
+      task.rateLimit.intervalMs,
+    );
 
     console.log(
       `${logPrefix} found ${bold(String(metadataFiles.length))} metadata files, ${bold(String(videoFiles.length))} videos`,
@@ -63,15 +69,21 @@ async function runTask(task: TaskConfig): Promise<void> {
     let metaSkipped = 0;
 
     if (task.remote.syncMetadata) {
-      const results = await runWithLimit(metadataFiles, (file) =>
-        syncMetadata(client, file, task.local.path),
+      const results = await runWithLimit(
+        metadataFiles,
+        (file) => syncMetadata(client, file, task.local.path),
+        task.rateLimit.concurrency,
+        task.rateLimit.intervalMs,
       );
       metaDownloaded = results.filter((r) => r === 'downloaded').length;
       metaSkipped = results.filter((r) => r === 'skipped').length;
     }
 
-    const strmResults = await runWithLimit(videoFiles, (file) =>
-      generateStrm(file, task.remote, task.local.path),
+    const strmResults = await runWithLimit(
+      videoFiles,
+      (file) => generateStrm(file, task.remote, task.local.path),
+      task.rateLimit.concurrency,
+      task.rateLimit.intervalMs,
     );
     const strmGenerated = strmResults.filter((r) => r === 'generated').length;
     const strmSkipped = strmResults.filter((r) => r === 'skipped').length;
@@ -87,7 +99,12 @@ async function runTask(task: TaskConfig): Promise<void> {
   }
 }
 
-async function runWithLimit<T, R>(items: T[], fn: (item: T) => Promise<R>): Promise<R[]> {
+async function runWithLimit<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>,
+  concurrency: number,
+  intervalMs: number,
+): Promise<R[]> {
   const results: R[] = new Array(items.length);
   let index = 0;
 
@@ -95,10 +112,11 @@ async function runWithLimit<T, R>(items: T[], fn: (item: T) => Promise<R>): Prom
     while (index < items.length) {
       const i = index++;
       results[i] = await fn(items[i]);
+      if (intervalMs > 0) await delay(intervalMs);
     }
   }
 
-  const workers = Array.from({ length: Math.min(CONCURRENCY, items.length) }, () => worker());
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
   await Promise.all(workers);
   return results;
 }

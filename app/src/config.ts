@@ -20,6 +20,11 @@ export interface ResolvedRemoteConfig {
   syncMetadata?: boolean;
 }
 
+export interface RateLimitConfig {
+  concurrency: number;
+  intervalMs: number;
+}
+
 export interface LocalConfig {
   path: string;
 }
@@ -29,22 +34,31 @@ export interface TaskConfig {
   remote: ResolvedRemoteConfig;
   local: LocalConfig;
   cron: string;
+  rateLimit: RateLimitConfig;
 }
 
 interface RawTaskConfig {
   name: string;
   remote: RemoteConfig;
   local: LocalConfig;
-  cron: string;
+  cron?: string;
+  rateLimit?: Partial<RateLimitConfig>;
 }
 
 interface ConfigFile {
   remote?: RemoteConfig;
+  cron?: string;
+  rateLimit?: Partial<RateLimitConfig>;
   tasks: RawTaskConfig[];
 }
 
 const configFile = process.env.NODE_ENV === 'development' ? 'dev.json' : 'default.json';
 const CONFIG_PATH = path.join(__dirname, '..', 'config', configFile);
+
+const DEFAULT_RATE_LIMIT: RateLimitConfig = {
+  concurrency: 5,
+  intervalMs: 200,
+};
 
 export function load(): TaskConfig[] {
   const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
@@ -55,6 +69,8 @@ export function load(): TaskConfig[] {
   }
 
   const common = cfg.remote || {};
+  const commonRateLimit: Partial<RateLimitConfig> = cfg.rateLimit || {};
+  const commonCron = cfg.cron;
 
   return cfg.tasks.map((task, i): TaskConfig => {
     const merged: RemoteConfig = { ...common, ...task.remote };
@@ -65,17 +81,26 @@ export function load(): TaskConfig[] {
     if (!merged.password) throw new Error(`config: ${label}: remote.password is required`);
     if (!merged.path) throw new Error(`config: ${label}: remote.path is required`);
     if (!task.local?.path) throw new Error(`config: ${label}: local.path is required`);
-    if (!task.cron) throw new Error(`config: ${label}: cron is required`);
+
+    const cron = task.cron || commonCron;
+    if (!cron) throw new Error(`config: ${label}: cron is required`);
 
     merged.url = merged.url.replace(/\/+$/, '');
     merged.path = '/' + merged.path.replace(/^\/+|\/+$/g, '');
     merged.syncMetadata ??= true;
 
+    const rateLimit: RateLimitConfig = {
+      ...DEFAULT_RATE_LIMIT,
+      ...commonRateLimit,
+      ...(task.rateLimit || {}),
+    };
+
     return {
       name: task.name,
       remote: merged as ResolvedRemoteConfig,
       local: { path: path.resolve(task.local.path) },
-      cron: task.cron,
+      cron,
+      rateLimit,
     };
   });
 }

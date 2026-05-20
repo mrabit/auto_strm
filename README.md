@@ -8,7 +8,7 @@
 - 下载元数据文件（nfo、海报、字幕、音轨等）到本地
 - 为视频文件自动生成 `.strm` 链接，支持 CloudDrive2 流媒体 URL 格式
 - 增量同步，已存在的文件自动跳过，strm 内容不变则跳过写入
-- 并发处理，默认 10 个并发下载/生成，大幅提升同步速度
+- 并发处理，默认 5 个并发，请求间隔 200ms，避免触发服务端限频
 - 支持多任务配置，独立设置同步目录和定时规则
 - 定时执行，容器启动立即同步一次
 - 优雅退出，收到停止信号后等待当前任务完成再退出
@@ -39,6 +39,13 @@ docker compose up -d --build
     "password": "your-password",
     "publicUrl": "https://your-server.com"
   },
+  // 顶层 cron 为所有任务共享的定时规则，每个 task 可覆盖
+  "cron": "0 */6 * * *",
+  // 顶层 rateLimit 为所有任务共享的请求频率控制，每个 task 可覆盖
+  "rateLimit": {
+    "concurrency": 5,
+    "intervalMs": 200
+  },
   "tasks": [
     {
       "name": "剧集",
@@ -48,8 +55,7 @@ docker compose up -d --build
       },
       "local": {
         "path": "/data/剧集"
-      },
-      "cron": "0 */6 * * *"
+      }
     }
   ]
 }
@@ -62,9 +68,11 @@ docker compose up -d --build
 | `remote.publicUrl` | 可选，strm 链接使用的域名端口，不填则自动取 url 的 origin |
 | `remote.syncMetadata` | 默认 `true`，设为 `false` 只生成 strm 不下载元数据 |
 | `local.path` | 本地存储路径，Docker 内对应 `/data` |
-| `cron` | 定时表达式，启动时立即执行一次 |
+| `cron` | 定时表达式，启动时立即执行一次。顶层定义后任务可省略 |
+| `rateLimit.concurrency` | 并发下载数，默认 5 |
+| `rateLimit.intervalMs` | 请求间隔（毫秒），默认 200 |
 
-顶层 `remote` 为可选，省略时每个 task 必须填写完整的 `remote` 字段。
+顶层 `remote`、`cron`、`rateLimit` 均为可选，省略时每个 task 必须填写对应字段。
 
 默认配置文件不会被 git 追踪，首次使用需从 `default.example.json` 复制。
 

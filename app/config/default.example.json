@@ -5,6 +5,11 @@
     "password": "your-password",
     "publicUrl": ""
   },
+  "cron": "0 */6 * * *",
+  "rateLimit": {
+    "concurrency": 5,
+    "intervalMs": 200
+  },
   "tasks": [
     {
       "name": "example",
@@ -14,8 +19,7 @@
       },
       "local": {
         "path": "/data/example"
-      },
-      "cron": "0 */6 * * *"
+      }
     }
   ]
 }
