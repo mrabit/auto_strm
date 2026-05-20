@@ -8,7 +8,13 @@ import type { TaskConfig } from './config';
 
 const CONCURRENCY = 10;
 
+function formatTime(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 async function runTask(task: TaskConfig): Promise<void> {
+  const startedAt = Date.now();
   const logPrefix = `[${task.name}]`;
   console.log(`${logPrefix} syncing...`);
 
@@ -41,8 +47,10 @@ async function runTask(task: TaskConfig): Promise<void> {
     const strmGenerated = strmResults.filter((r) => r === 'generated').length;
     const strmSkipped = strmResults.filter((r) => r === 'skipped').length;
 
+    const endedAt = formatTime(new Date());
+    const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
     console.log(
-      `${logPrefix} done — metadata: ${metaDownloaded} downloaded, ${metaSkipped} skipped | strm: ${strmGenerated} generated, ${strmSkipped} skipped`,
+      `${logPrefix} done ${endedAt} (${elapsed}s) — metadata: ${metaDownloaded} downloaded, ${metaSkipped} skipped | strm: ${strmGenerated} generated, ${strmSkipped} skipped`,
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
