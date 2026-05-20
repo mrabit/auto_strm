@@ -47,16 +47,54 @@ app/
 
 ## Config schema
 
-```typescript
-interface RemoteConfig {
-  url: string;           // WebDAV endpoint (e.g. https://cd2.mac.mrabit.com/dav)
-  username: string;
-  password: string;
-  path: string;          // remote path to scan
-  publicUrl?: string;    // optional: override streaming host in strm URLs
-  syncMetadata?: boolean; // default true, set false to skip metadata download
+Top-level `remote` provides common connection config shared across tasks. Each task can override any field via its own `remote`. If top-level `remote` is omitted, each task must supply all required fields.
+
+```jsonc
+{
+  "remote": {                        // optional: common config shared by all tasks
+    "url": "https://your-server.com/dav",
+    "username": "your-account",
+    "password": "your-password",
+    "publicUrl": "https://your-server.com"  // optional: override streaming host
+  },
+  "tasks": [
+    {
+      "name": "example",
+      "remote": {
+        "path": "/cloud-drive/Media/Movies",  // required per task (or from common)
+        "syncMetadata": true                  // optional, defaults to true
+        // url/username/password can be overridden per task if needed
+      },
+      "local": { "path": "./data/example" },
+      "cron": "0 */6 * * *"
+    }
+  ]
 }
 ```
+
+```typescript
+// Before merge (RawTaskConfig / ConfigFile)
+interface RemoteConfig {
+  url?: string;
+  username?: string;
+  password?: string;
+  path?: string;
+  publicUrl?: string;
+  syncMetadata?: boolean; // default true
+}
+
+// After merge (TaskConfig) — all required fields guaranteed present
+interface ResolvedRemoteConfig {
+  url: string;
+  username: string;
+  password: string;
+  path: string;
+  publicUrl?: string;
+  syncMetadata?: boolean;
+}
+```
+
+Merge: `{ ...commonRemote, ...taskRemote }` — task values take precedence.
 
 ## .strm URL format
 
@@ -75,7 +113,7 @@ Metadata downloads and strm generation run concurrently within each task (defaul
 
 ## Key types
 
-- `TaskConfig` / `RemoteConfig` / `LocalConfig` — defined in `config.ts`
+- `TaskConfig` / `RemoteConfig` / `ResolvedRemoteConfig` / `LocalConfig` — defined in `config.ts`
 - `MetadataFile` / `VideoFile` / `ScanResult` — defined in `scanner.ts`
 - `SchedulerHandle` — `{ stop: () => void }`, returned by `scheduler.start()`
 

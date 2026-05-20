@@ -30,18 +30,21 @@ docker compose up -d --build
 
 ## 配置
 
-```json
+```jsonc
 {
+  // 顶层 remote 为所有任务共享的公共连接配置，每个 task 可覆盖任意字段
+  "remote": {
+    "url": "https://your-server.com/dav",
+    "username": "your-account",
+    "password": "your-password",
+    "publicUrl": "https://your-server.com"
+  },
   "tasks": [
     {
       "name": "剧集",
       "remote": {
-        "url": "https://your-server.com/dav",
-        "username": "your-account",
-        "password": "your-password",
         "path": "/cloud-drive/Media/剧集",
-        "syncMetadata": false,
-        "publicUrl": "https://your-server.com"
+        "syncMetadata": false
       },
       "local": {
         "path": "/data/剧集"
@@ -61,4 +64,14 @@ docker compose up -d --build
 | `local.path` | 本地存储路径，Docker 内对应 `/data` |
 | `cron` | 定时表达式，启动时立即执行一次 |
 
+顶层 `remote` 为可选，省略时每个 task 必须填写完整的 `remote` 字段。
+
 默认配置文件不会被 git 追踪，首次使用需从 `default.example.json` 复制。
+
+## 技术栈
+
+- TypeScript + Node.js 22
+- Docker 容器化（两阶段构建）
+- `webdav` (v5) — WebDAV 客户端
+- `cron` (v3) — 定时调度
+- `tsx` — 开发模式热更新

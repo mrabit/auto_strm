@@ -2,6 +2,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export interface RemoteConfig {
+  url?: string;
+  username?: string;
+  password?: string;
+  path?: string;
+  publicUrl?: string;
+  syncMetadata?: boolean;
+}
+
+/** RemoteConfig after merge — required fields are guaranteed by validation */
+export interface ResolvedRemoteConfig {
   url: string;
   username: string;
   password: string;
@@ -16,9 +26,21 @@ export interface LocalConfig {
 
 export interface TaskConfig {
   name: string;
+  remote: ResolvedRemoteConfig;
+  local: LocalConfig;
+  cron: string;
+}
+
+interface RawTaskConfig {
+  name: string;
   remote: RemoteConfig;
   local: LocalConfig;
   cron: string;
+}
+
+interface ConfigFile {
+  remote?: RemoteConfig;
+  tasks: RawTaskConfig[];
 }
 
 const configFile = process.env.NODE_ENV === 'development' ? 'dev.json' : 'default.json';
@@ -26,24 +48,34 @@ const CONFIG_PATH = path.join(__dirname, '..', 'config', configFile);
 
 export function load(): TaskConfig[] {
   const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
-  const cfg = JSON.parse(raw) as { tasks: TaskConfig[] };
+  const cfg = JSON.parse(raw) as ConfigFile;
 
   if (!cfg.tasks || !Array.isArray(cfg.tasks) || cfg.tasks.length === 0) {
     throw new Error('config: "tasks" must be a non-empty array');
   }
 
-  cfg.tasks.forEach((task, i) => {
+  const common = cfg.remote || {};
+
+  return cfg.tasks.map((task, i): TaskConfig => {
+    const merged: RemoteConfig = { ...common, ...task.remote };
+
     const label = task.name || `task[${i}]`;
-    if (!task.remote?.url) throw new Error(`config: ${label}: remote.url is required`);
-    if (!task.remote?.path) throw new Error(`config: ${label}: remote.path is required`);
+    if (!merged.url) throw new Error(`config: ${label}: remote.url is required`);
+    if (!merged.username) throw new Error(`config: ${label}: remote.username is required`);
+    if (!merged.password) throw new Error(`config: ${label}: remote.password is required`);
+    if (!merged.path) throw new Error(`config: ${label}: remote.path is required`);
     if (!task.local?.path) throw new Error(`config: ${label}: local.path is required`);
     if (!task.cron) throw new Error(`config: ${label}: cron is required`);
 
-    task.remote.url = task.remote.url.replace(/\/+$/, '');
-    task.remote.path = '/' + task.remote.path.replace(/^\/+|\/+$/g, '');
-    task.remote.syncMetadata ??= true;
-    task.local.path = path.resolve(task.local.path);
-  });
+    merged.url = merged.url.replace(/\/+$/, '');
+    merged.path = '/' + merged.path.replace(/^\/+|\/+$/g, '');
+    merged.syncMetadata ??= true;
 
-  return cfg.tasks;
+    return {
+      name: task.name,
+      remote: merged as ResolvedRemoteConfig,
+      local: { path: path.resolve(task.local.path) },
+      cron: task.cron,
+    };
+  });
 }

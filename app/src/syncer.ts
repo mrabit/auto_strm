@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { WebDAVClient } from 'webdav';
-import type { RemoteConfig } from './config';
+import type { ResolvedRemoteConfig } from './config';
 import type { MetadataFile, VideoFile } from './scanner';
 
 export async function syncMetadata(
@@ -19,7 +19,7 @@ export async function syncMetadata(
 
 export async function generateStrm(
   file: VideoFile,
-  remoteConfig: RemoteConfig,
+  remoteConfig: ResolvedRemoteConfig,
   localBase: string,
 ): Promise<'generated' | 'skipped'> {
   const parsed = path.parse(file.relativePath);
@@ -50,7 +50,7 @@ function strmContentMatches(strmPath: string, remoteUrl: string): boolean {
   return false;
 }
 
-function buildStrmUrl(relativePath: string, remoteConfig: RemoteConfig): string {
+function buildStrmUrl(relativePath: string, remoteConfig: ResolvedRemoteConfig): string {
   const base = remoteConfig.publicUrl || new URL(remoteConfig.url).origin;
   const baseUrl = new URL(base);
   const proto = baseUrl.protocol.replace(':', '');

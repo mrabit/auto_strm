@@ -8,6 +8,35 @@ import type { TaskConfig } from './config';
 
 const CONCURRENCY = 10;
 
+const C = {
+  reset: '\x1b[0m',
+  dim: '\x1b[2m',
+  bold: '\x1b[1m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  cyan: '\x1b[36m',
+  red: '\x1b[31m',
+};
+
+function dim(s: string) {
+  return C.dim + s + C.reset;
+}
+function bold(s: string) {
+  return C.bold + s + C.reset;
+}
+function green(s: string) {
+  return C.green + s + C.reset;
+}
+function yellow(s: string) {
+  return C.yellow + s + C.reset;
+}
+function cyan(s: string) {
+  return C.cyan + s + C.reset;
+}
+function red(s: string) {
+  return C.red + s + C.reset;
+}
+
 function formatTime(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
@@ -15,8 +44,8 @@ function formatTime(d: Date): string {
 
 async function runTask(task: TaskConfig): Promise<void> {
   const startedAt = Date.now();
-  const logPrefix = `[${task.name}]`;
-  console.log(`${logPrefix} syncing...`);
+  const logPrefix = cyan(`[${task.name}]`);
+  console.log(`${logPrefix} ${dim('syncing...')}`);
 
   try {
     const client = createClient(task.remote.url, {
@@ -27,7 +56,7 @@ async function runTask(task: TaskConfig): Promise<void> {
     const { metadataFiles, videoFiles } = await scan(client, task.remote.path);
 
     console.log(
-      `${logPrefix} found ${metadataFiles.length} metadata files, ${videoFiles.length} videos`,
+      `${logPrefix} found ${bold(String(metadataFiles.length))} metadata files, ${bold(String(videoFiles.length))} videos`,
     );
 
     let metaDownloaded = 0;
@@ -50,11 +79,11 @@ async function runTask(task: TaskConfig): Promise<void> {
     const endedAt = formatTime(new Date());
     const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
     console.log(
-      `${logPrefix} done ${endedAt} (${elapsed}s) — metadata: ${metaDownloaded} downloaded, ${metaSkipped} skipped | strm: ${strmGenerated} generated, ${strmSkipped} skipped`,
+      `${logPrefix} ${green('done')} ${dim(endedAt)} ${bold(`(${elapsed}s)`)} — metadata: ${green(String(metaDownloaded))} downloaded, ${yellow(String(metaSkipped))} skipped | strm: ${green(String(strmGenerated))} generated, ${yellow(String(strmSkipped))} skipped`,
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${logPrefix} error:`, msg);
+    console.error(`${logPrefix} ${red('error')}:`, msg);
   }
 }
 
@@ -75,7 +104,7 @@ async function runWithLimit<T, R>(items: T[], fn: (item: T) => Promise<R>): Prom
 }
 
 const tasks = load();
-console.log(`loaded ${tasks.length} task(s)`);
+console.log(`loaded ${bold(String(tasks.length))} task(s)`);
 
 let running = 0;
 const runningTasks = new Set<string>();
@@ -100,7 +129,7 @@ const SHUTDOWN_TIMEOUT = 30_000;
 function shutdown(signal: string) {
   if (shuttingDown) return;
   shuttingDown = true;
-  console.log(`\nreceived ${signal}, shutting down...`);
+  console.log(`\n${yellow('received ' + signal)}, shutting down...`);
   handle.stop();
 
   if (process.env.NODE_ENV === 'development') {
