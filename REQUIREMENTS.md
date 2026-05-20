@@ -15,3 +15,9 @@
 - 定时执行，启动时立即执行一次
 - 监听 SIGTERM/SIGINT 信号，优雅退出（停止定时器，等待当前任务完成）
 - `NODE_ENV=development` 时读 `config/dev.json`，否则读 `config/default.json`
+
+## 开发
+
+- `npm run dev` — 开发模式热更新
+- `npm run check` — 提交前检查（lint + 类型检查），git pre-commit hook 自动执行
+- `npm run build` — 仅编译（Docker 构建用，不含 lint）

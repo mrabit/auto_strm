@@ -20,11 +20,17 @@
 cp app/config/default.example.json app/config/default.json
 # 编辑 default.json，填入你的 CloudDrive2 地址和账号密码
 
-# 2. 开发模式（本地运行，读取 config/dev.json）
-# 创建 dev.json 配置文件，然后：
-cd app && npm install && npm run dev
+# 2. 安装依赖 + 初始化 git hook
+cd app && npm install
 
-# 3. 生产模式（Docker）
+# 3. 开发模式（本地运行，读取 config/dev.json）
+# 创建 dev.json 配置文件，然后：
+npm run dev
+
+# 4. 提交前检查（lint + 类型检查，git pre-commit hook 自动执行）
+npm run check
+
+# 5. 生产模式（Docker）
 docker compose up -d --build
 ```
 

@@ -9,13 +9,16 @@ Dockerized TypeScript app that syncs media metadata from WebDAV and generates `.
 ## Commands
 
 ```bash
-# Install dependencies
-cd app && npm install
+# Install dependencies + git hook
+cd app && npm install && cp ../.git/hooks/pre-commit ../.git/hooks/pre-commit
 
 # Dev mode with auto-reload (reads config/dev.json)
 cd app && npm run dev
 
-# Type-check and compile (runs lint then tsc)
+# Pre-commit check: lint + type-check — MUST run before committing
+cd app && npm run check
+
+# Type-check and compile (used in Docker, no lint)
 cd app && npm run build
 
 # Run compiled output
@@ -24,6 +27,8 @@ cd app && npm start
 # Docker
 docker compose up --build
 ```
+
+**Before every commit:** run `cd app && npm run check` (lint + tsc). A git pre-commit hook enforces this automatically.
 
 ## Architecture
 
