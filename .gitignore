@@ -1,0 +1,9 @@
+node_modules/
+npm-debug.log*
+.env
+.env.*
+dist/
+.cache/
+app/config/default.json
+app/config/dev.json
+data

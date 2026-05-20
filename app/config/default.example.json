@@ -1,0 +1,19 @@
+{
+  "tasks": [
+    {
+      "name": "example",
+      "remote": {
+        "url": "https://your-server.com/dav",
+        "username": "your-account",
+        "password": "your-password",
+        "path": "/cloud-drive/Media",
+        "syncMetadata": true,
+        "publicUrl": ""
+      },
+      "local": {
+        "path": "/data/example"
+      },
+      "cron": "0 */6 * * *"
+    }
+  ]
+}
