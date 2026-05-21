@@ -6,6 +6,7 @@ services:
       - "${WEB_PORT:-28491}:3000"
     environment:
       - WEB_PORT=3000
+      - TZ=Asia/Shanghai
     volumes:
       - ./config:/app/config
       - ./data:/data

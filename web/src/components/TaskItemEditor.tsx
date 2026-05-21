@@ -10,12 +10,13 @@ import type { RemoteConfig, RateLimitConfig, RawTaskConfig } from '../types';
 interface Props {
   task: RawTaskConfig;
   index: number;
+  isNew?: boolean;
   defaults?: { remote?: RemoteConfig; cron?: string; rateLimit?: RateLimitConfig };
   onChange: (task: RawTaskConfig) => void;
   onDelete: () => void;
 }
 
-export default function TaskItemEditor({ task, index, defaults, onChange, onDelete }: Props) {
+export default function TaskItemEditor({ task, index, isNew, defaults, onChange, onDelete }: Props) {
   const [syncing, setSyncing] = useState(false);
   const panelStyle: React.CSSProperties = { marginBottom: 8 };
 
@@ -35,12 +36,16 @@ export default function TaskItemEditor({ task, index, defaults, onChange, onDele
     <Card
       size="small"
       title={
-        <Input
-          style={{ width: 200 }}
-          placeholder={`Task ${index + 1}`}
-          value={task.name}
-          onChange={(e) => onChange({ ...task, name: e.target.value })}
-        />
+        isNew ? (
+          <Input
+            style={{ width: 200 }}
+            placeholder={`Task ${index + 1}`}
+            value={task.name}
+            onChange={(e) => onChange({ ...task, name: e.target.value })}
+          />
+        ) : (
+          <span style={{ fontWeight: 500 }}>{task.name || `Task ${index + 1}`}</span>
+        )
       }
       extra={
         <>

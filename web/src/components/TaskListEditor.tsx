@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import TaskItemEditor from './TaskItemEditor';
@@ -26,6 +27,8 @@ interface Props {
 }
 
 export default function TaskListEditor({ tasks, defaults, onChange }: Props) {
+  const [newKeys, setNewKeys] = useState<Set<string>>(new Set());
+
   // ensure each task has a stable _key for React
   const tasksWithKeys = tasks.map((t) => (t._key ? t : { ...t, _key: uid() }));
 
@@ -36,11 +39,17 @@ export default function TaskListEditor({ tasks, defaults, onChange }: Props) {
   }
 
   function removeTask(index: number) {
+    const removed = tasksWithKeys[index];
+    const nextKeys = new Set(newKeys);
+    nextKeys.delete(removed._key!);
+    setNewKeys(nextKeys);
     onChange(tasksWithKeys.filter((_, i) => i !== index));
   }
 
   function addTask() {
-    onChange([...tasksWithKeys, emptyTask()]);
+    const task = emptyTask();
+    setNewKeys((prev) => new Set(prev).add(task._key!));
+    onChange([...tasksWithKeys, task]);
   }
 
   return (
@@ -50,6 +59,7 @@ export default function TaskListEditor({ tasks, defaults, onChange }: Props) {
           key={task._key}
           task={task}
           index={i}
+          isNew={newKeys.has(task._key!)}
           defaults={defaults}
           onChange={(t) => updateTask(i, t)}
           onDelete={() => removeTask(i)}
