@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { CronJob } from 'cron';
 
 export interface RemoteConfig {
@@ -38,6 +39,7 @@ export interface LocalConfig {
 
 export interface TaskConfig {
   name: string;
+  key?: string;
   remote: ResolvedRemoteConfig;
   local: LocalConfig;
   cron: string;
@@ -54,7 +56,7 @@ export interface RawTaskConfig {
   rateLimit?: Partial<RateLimitConfig>;
   enabled?: boolean;
   jellyfin?: JellyfinConfig;
-  _key?: string;
+  key?: string;
 }
 
 export interface ConfigFile {
@@ -74,8 +76,8 @@ const DEFAULT_RATE_LIMIT: RateLimitConfig = {
 };
 
 export function validateConfig(cfg: ConfigFile): void {
-  if (!cfg.tasks || !Array.isArray(cfg.tasks) || cfg.tasks.length === 0) {
-    throw new Error('config: "tasks" must be a non-empty array');
+  if (!cfg.tasks || !Array.isArray(cfg.tasks)) {
+    throw new Error('config: "tasks" must be an array');
   }
 
   const common = cfg.remote || {};
@@ -119,7 +121,14 @@ export function load(): TaskConfig[] {
   const commonRateLimit: Partial<RateLimitConfig> = cfg.rateLimit || {};
   const commonCron = cfg.cron;
 
-  return cfg.tasks.map((task): TaskConfig => {
+  let migrated = false;
+
+  const tasks = cfg.tasks.map((task): TaskConfig => {
+    if (!task.key) {
+      task.key = crypto.randomUUID();
+      migrated = true;
+    }
+
     const merged: RemoteConfig = { ...common, ...task.remote };
     const cron = task.cron || commonCron;
 
@@ -137,6 +146,7 @@ export function load(): TaskConfig[] {
 
     return {
       name: task.name,
+      key: task.key!,
       remote: merged as ResolvedRemoteConfig,
       local: { path: path.resolve(task.local.path) },
       cron: cron!,
@@ -145,4 +155,12 @@ export function load(): TaskConfig[] {
       jellyfin,
     };
   });
+
+  if (migrated) {
+    const tmpPath = CONFIG_PATH + '.tmp';
+    fs.writeFileSync(tmpPath, JSON.stringify(cfg, null, 2), 'utf-8');
+    fs.renameSync(tmpPath, CONFIG_PATH);
+  }
+
+  return tasks;
 }

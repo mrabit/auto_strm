@@ -24,7 +24,7 @@ export default function TaskItemEditor({ task, index, isNew, defaults, onChange,
   async function handleSync() {
     setSyncing(true);
     try {
-      await syncTask(task.name);
+      await syncTask(task.key!);
       message.success(`"${task.name}" sync started`);
     } catch (err) {
       message.error('Sync failed: ' + (err instanceof Error ? err.message : String(err)));
@@ -55,7 +55,7 @@ export default function TaskItemEditor({ task, index, isNew, defaults, onChange,
             icon={<ThunderboltOutlined />}
             loading={syncing}
             onClick={handleSync}
-            disabled={!task.name || task.enabled === false}
+            disabled={isNew}
             style={{ marginRight: 8 }}
           >
             Sync

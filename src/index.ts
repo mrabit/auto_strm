@@ -129,22 +129,17 @@ async function runWithLimit<T, R>(
   return results;
 }
 
-function loadEnabledTasks() {
-  const all = load();
-  const enabled = all.filter((t) => t.enabled);
-  if (enabled.length < all.length) {
-    const skipped = all
+async function main() {
+  const allTasks = load();
+  const enabled = allTasks.filter((t) => t.enabled);
+  if (enabled.length < allTasks.length) {
+    const skipped = allTasks
       .filter((t) => !t.enabled)
       .map((t) => t.name)
       .join(', ');
     console.log(`${dim('skipped disabled tasks:')} ${skipped}`);
   }
-  return enabled;
-}
-
-async function main() {
-  const tasks = loadEnabledTasks();
-  console.log(`loaded ${bold(String(tasks.length))} task(s)`);
+  console.log(`loaded ${bold(String(enabled.length))} task(s)`);
 
   let running = 0;
   const runningTasks = new Set<string>();
@@ -162,7 +157,7 @@ async function main() {
     }
   }
 
-  const handle: SchedulerHandle = start(tasks, runTaskTracked);
+  const handle: SchedulerHandle = start(enabled, runTaskTracked);
 
   let watchTimer: ReturnType<typeof setTimeout> | null = null;
   fs.watchFile(CONFIG_PATH, { interval: 1000 }, () => {
@@ -170,11 +165,13 @@ async function main() {
     watchTimer = setTimeout(() => {
       watchTimer = null;
       try {
-        const newTasks = loadEnabledTasks();
+        const newAll = load();
+        const newEnabled = newAll.filter((t) => t.enabled);
         console.log(
-          `${yellow('config changed')}, ${bold(String(newTasks.length))} task(s) reloaded`,
+          `${yellow('config changed')}, ${bold(String(newEnabled.length))} task(s) reloaded`,
         );
-        handle.update(newTasks);
+        handle.update(newEnabled);
+        if (updateServerTasks) updateServerTasks(newAll);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`${red('config reload error:')} ${msg}`);
@@ -184,10 +181,13 @@ async function main() {
 
   // Web server (opt-in via WEB_PORT env)
   let webServer: Server | null = null;
+  let updateServerTasks: ((tasks: TaskConfig[]) => void) | null = null;
   const webPort = parseInt(process.env.WEB_PORT || '', 10);
   if (webPort > 0) {
     const { startServer } = await import('./server.js');
-    webServer = await startServer(webPort, CONFIG_PATH, handle);
+    const result = await startServer(webPort, CONFIG_PATH, handle, runTaskTracked, allTasks);
+    webServer = result.server;
+    updateServerTasks = result.updateTasks;
   }
 
   const SHUTDOWN_TIMEOUT = 30_000;

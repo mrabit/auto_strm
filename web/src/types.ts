@@ -30,7 +30,7 @@ export interface RawTaskConfig {
   cron?: string;
   rateLimit?: RateLimitConfig;
   jellyfin?: JellyfinConfig;
-  _key?: string;
+  key?: string;
 }
 
 export interface ConfigFile {

@@ -20,8 +20,8 @@ export async function saveConfig(config: ConfigFile): Promise<void> {
   if (!res.ok) return handleError(res);
 }
 
-export async function syncTask(name: string): Promise<void> {
-  const res = await fetch(`/api/tasks/${encodeURIComponent(name)}/sync`, { method: 'POST' });
+export async function syncTask(key: string): Promise<void> {
+  const res = await fetch(`/api/tasks/${encodeURIComponent(key)}/sync`, { method: 'POST' });
   if (!res.ok) return handleError(res);
 }
 

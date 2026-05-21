@@ -1,22 +1,13 @@
-import { useState } from 'react';
 import { Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import TaskItemEditor from './TaskItemEditor';
 import type { RemoteConfig, RateLimitConfig, JellyfinConfig, RawTaskConfig } from '../types';
-
-function uid(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
-}
 
 function emptyTask(): RawTaskConfig {
   return {
     name: '',
     remote: {},
     local: { path: '' },
-    _key: uid(),
   };
 }
 
@@ -27,39 +18,28 @@ interface Props {
 }
 
 export default function TaskListEditor({ tasks, defaults, onChange }: Props) {
-  const [newKeys, setNewKeys] = useState<Set<string>>(new Set());
-
-  // ensure each task has a stable _key for React
-  const tasksWithKeys = tasks.map((t) => (t._key ? t : { ...t, _key: uid() }));
-
   function updateTask(index: number, task: RawTaskConfig) {
-    const next = [...tasksWithKeys];
+    const next = [...tasks];
     next[index] = task;
     onChange(next);
   }
 
   function removeTask(index: number) {
-    const removed = tasksWithKeys[index];
-    const nextKeys = new Set(newKeys);
-    nextKeys.delete(removed._key!);
-    setNewKeys(nextKeys);
-    onChange(tasksWithKeys.filter((_, i) => i !== index));
+    onChange(tasks.filter((_, i) => i !== index));
   }
 
   function addTask() {
-    const task = emptyTask();
-    setNewKeys((prev) => new Set(prev).add(task._key!));
-    onChange([...tasksWithKeys, task]);
+    onChange([...tasks, emptyTask()]);
   }
 
   return (
     <div>
-      {tasksWithKeys.map((task, i) => (
+      {tasks.map((task, i) => (
         <TaskItemEditor
-          key={task._key}
+          key={task.key}
           task={task}
           index={i}
-          isNew={newKeys.has(task._key!)}
+          isNew={!task.key}
           defaults={defaults}
           onChange={(t) => updateTask(i, t)}
           onDelete={() => removeTask(i)}

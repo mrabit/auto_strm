@@ -46,6 +46,7 @@ export default function ConfigPage({ onDirtyChange, triggerSave, onSaveDone }: P
         try {
           await saveConfig(configRef.current!);
           message.success('Config saved');
+          await load();
           onDirtyChange?.(false);
           onSaveDone?.();
         } catch (err) {
