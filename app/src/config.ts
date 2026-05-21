@@ -35,6 +35,7 @@ export interface TaskConfig {
   local: LocalConfig;
   cron: string;
   rateLimit: RateLimitConfig;
+  enabled: boolean;
 }
 
 interface RawTaskConfig {
@@ -43,6 +44,7 @@ interface RawTaskConfig {
   local: LocalConfig;
   cron?: string;
   rateLimit?: Partial<RateLimitConfig>;
+  enabled?: boolean;
 }
 
 interface ConfigFile {
@@ -53,7 +55,7 @@ interface ConfigFile {
 }
 
 const configFile = process.env.NODE_ENV === 'development' ? 'dev.json' : 'default.json';
-const CONFIG_PATH = path.join(__dirname, '..', 'config', configFile);
+export const CONFIG_PATH = path.join(__dirname, '..', 'config', configFile);
 
 const DEFAULT_RATE_LIMIT: RateLimitConfig = {
   concurrency: 5,
@@ -101,6 +103,7 @@ export function load(): TaskConfig[] {
       local: { path: path.resolve(task.local.path) },
       cron,
       rateLimit,
+      enabled: task.enabled ?? true,
     };
   });
 }

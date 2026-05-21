@@ -13,6 +13,7 @@
   "tasks": [
     {
       "name": "example",
+      "enabled": true,
       "remote": {
         "path": "/cloud-drive/Media",
         "syncMetadata": true

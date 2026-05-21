@@ -10,7 +10,9 @@
 - 增量同步，已存在的文件自动跳过，strm 内容不变则跳过写入
 - 并发处理，默认 5 个并发，请求间隔 200ms，避免触发服务端限频
 - 支持多任务配置，独立设置同步目录和定时规则
+- 任务可单独启用/禁用（`enabled` 字段，默认 `true`）
 - 定时执行，容器启动立即同步一次
+- 配置文件热更新，修改后自动重载，无需重启
 - 优雅退出，收到停止信号后等待当前任务完成再退出
 
 ## 快速开始
@@ -55,6 +57,7 @@ docker compose up -d --build
   "tasks": [
     {
       "name": "剧集",
+      "enabled": true,
       "remote": {
         "path": "/cloud-drive/Media/剧集",
         "syncMetadata": false
@@ -75,6 +78,7 @@ docker compose up -d --build
 | `remote.syncMetadata` | 默认 `true`，设为 `false` 只生成 strm 不下载元数据 |
 | `local.path` | 本地存储路径，Docker 内对应 `/data` |
 | `cron` | 定时表达式，启动时立即执行一次。顶层定义后任务可省略 |
+| `enabled` | 默认 `true`，设为 `false` 则跳过该任务 |
 | `rateLimit.concurrency` | 并发下载数，默认 5 |
 | `rateLimit.intervalMs` | 请求间隔（毫秒），默认 200 |
 

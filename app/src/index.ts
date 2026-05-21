@@ -1,5 +1,6 @@
+import fs from 'node:fs';
 import { createClient } from 'webdav';
-import { load } from './config';
+import { load, CONFIG_PATH } from './config';
 import { scan } from './scanner';
 import { syncMetadata, generateStrm } from './syncer';
 import { start } from './scheduler';
@@ -121,7 +122,15 @@ async function runWithLimit<T, R>(
   return results;
 }
 
-const tasks = load();
+const allTasks = load();
+const tasks = allTasks.filter((t) => t.enabled);
+if (tasks.length < allTasks.length) {
+  const skipped = allTasks
+    .filter((t) => !t.enabled)
+    .map((t) => t.name)
+    .join(', ');
+  console.log(`${dim('skipped disabled tasks:')} ${skipped}`);
+}
 console.log(`loaded ${bold(String(tasks.length))} task(s)`);
 
 let running = 0;
@@ -141,6 +150,30 @@ async function runTaskTracked(task: TaskConfig): Promise<void> {
 }
 
 const handle: SchedulerHandle = start(tasks, runTaskTracked);
+
+let watchTimer: ReturnType<typeof setTimeout> | null = null;
+fs.watchFile(CONFIG_PATH, { interval: 1000 }, () => {
+  if (watchTimer) clearTimeout(watchTimer);
+  watchTimer = setTimeout(() => {
+    watchTimer = null;
+    try {
+      const newAll = load();
+      const newTasks = newAll.filter((t) => t.enabled);
+      if (newTasks.length < newAll.length) {
+        const skipped = newAll
+          .filter((t) => !t.enabled)
+          .map((t) => t.name)
+          .join(', ');
+        console.log(`${dim('skipped disabled tasks:')} ${skipped}`);
+      }
+      console.log(`${yellow('config changed')}, ${bold(String(newTasks.length))} task(s) reloaded`);
+      handle.update(newTasks);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`${red('config reload error:')} ${msg}`);
+    }
+  }, 1000);
+});
 
 const SHUTDOWN_TIMEOUT = 30_000;
 

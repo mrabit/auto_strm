@@ -48,7 +48,7 @@ app/
 └── data/                  # Local sync destination (Docker volume mount)
 ```
 
-**Flow**: `index.ts` → `config.load()` → `scheduler.start(tasks, runTaskTracked)` → for each task: `createClient(url, {username, password})` → `scanner.scan()` → (if syncMetadata) concurrent `syncer.syncMetadata()` → concurrent `syncer.generateStrm()` → log stats. On SIGTERM/SIGINT: stop cron jobs, wait for in-flight tasks, exit.
+**Flow**: `index.ts` → `config.load()` → filter enabled tasks → `scheduler.start(tasks, runTaskTracked)` → watch config with `fs.watchFile` for hot-reload → for each task: `createClient(url, {username, password})` → `scanner.scan()` → (if syncMetadata) concurrent `syncer.syncMetadata()` → concurrent `syncer.generateStrm()` → log stats. On SIGTERM/SIGINT: stop cron jobs, wait for in-flight tasks, exit.
 
 ## Config schema
 
@@ -70,6 +70,7 @@ Top-level `remote`, `cron`, and `rateLimit` provide common defaults shared acros
   "tasks": [
     {
       "name": "example",
+      "enabled": true,                     // optional, defaults to true
       "remote": {
         "path": "/cloud-drive/Media/Movies",  // required per task (or from common)
         "syncMetadata": true                  // optional, defaults to true
@@ -118,12 +119,14 @@ interface TaskConfig {
   local: LocalConfig;
   cron: string;
   rateLimit: RateLimitConfig;
+  enabled: boolean; // default true
 }
 ```
 
 Merge: `{ ...commonRemote, ...taskRemote }` — task values take precedence.
 Cron merge: `task.cron || commonCron` — task wins, falls back to top-level.
 Rate limit merge: `DEFAULT → top-level rateLimit → task rateLimit` — each field merges independently.
+Enabled: `task.enabled ?? true` — per-task only, no common override.
 
 ## .strm URL format
 
@@ -144,10 +147,11 @@ Metadata downloads and strm generation run concurrently within each task. Contro
 
 - `TaskConfig` / `RemoteConfig` / `ResolvedRemoteConfig` / `LocalConfig` — defined in `config.ts`
 - `MetadataFile` / `VideoFile` / `ScanResult` — defined in `scanner.ts`
-- `SchedulerHandle` — `{ stop: () => void }`, returned by `scheduler.start()`
+- `SchedulerHandle` — `{ stop: () => void; update: (tasks: TaskConfig[]) => void }`, returned by `scheduler.start()`
 
 ## Key behaviors
 
+- **Config hot-reload**: `fs.watchFile` monitors the config file. On change, config is reloaded, cron jobs are rebuilt. Existing tasks only get updated cron schedules (no immediate re-run); genuinely new tasks fire immediately. Parse errors leave old jobs running untouched.
 - **Incremental sync**: metadata files are skipped if the local file already exists (existence-only check, no size/mtime comparison). `.strm` files are skipped if content matches.
 - **Error cleanup**: partial downloads are deleted on failure so the next run retries cleanly.
 - **Graceful shutdown**: on SIGTERM/SIGINT, cron jobs are stopped and in-flight tasks allowed to finish before exit (30s timeout, then force exit).
