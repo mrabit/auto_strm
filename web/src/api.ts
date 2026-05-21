@@ -1,4 +1,4 @@
-import type { ConfigFile } from './types';
+import type { ConfigFile, LogEntry } from './types';
 
 async function handleError(res: Response): Promise<never> {
   const body = await res.json().catch(() => ({}));
@@ -23,4 +23,10 @@ export async function saveConfig(config: ConfigFile): Promise<void> {
 export async function syncTask(name: string): Promise<void> {
   const res = await fetch(`/api/tasks/${encodeURIComponent(name)}/sync`, { method: 'POST' });
   if (!res.ok) return handleError(res);
+}
+
+export async function fetchLogs(): Promise<LogEntry[]> {
+  const res = await fetch('/api/logs');
+  if (!res.ok) return handleError(res);
+  return res.json();
 }

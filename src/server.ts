@@ -6,6 +6,7 @@ import type { Server } from 'node:http';
 import { load, validateConfig } from './config';
 import type { ConfigFile } from './config';
 import type { SchedulerHandle } from './scheduler';
+import { getLogs } from './logger';
 
 export function startServer(
   port: number,
@@ -72,6 +73,10 @@ export function startServer(
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', uptime: process.uptime() });
+  });
+
+  app.get('/api/logs', (_req, res) => {
+    res.json(getLogs());
   });
 
   // Static files + SPA fallback

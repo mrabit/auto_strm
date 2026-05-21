@@ -1,3 +1,4 @@
+import './logger'; // must be first to capture all console output
 import fs from 'node:fs';
 import type { Server } from 'node:http';
 import { createClient } from 'webdav';

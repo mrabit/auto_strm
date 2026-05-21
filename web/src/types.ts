@@ -32,3 +32,9 @@ export interface ConfigFile {
   rateLimit?: RateLimitConfig;
   tasks: RawTaskConfig[];
 }
+
+export interface LogEntry {
+  timestamp: string;
+  level: 'info' | 'warn' | 'error';
+  message: string;
+}
