@@ -149,7 +149,7 @@ export default function TaskItemEditor({ task, index, isNew, defaults, onChange,
                 onChange={(v) =>
                   onChange({
                     ...task,
-                    jellyfin: v.url || v.token ? (v as JellyfinConfig) : undefined,
+                    jellyfin: v.url || v.token || v.enabled !== undefined ? (v as JellyfinConfig) : undefined,
                   })
                 }
               />

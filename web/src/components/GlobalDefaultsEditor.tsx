@@ -46,7 +46,7 @@ export default function GlobalDefaultsEditor({ value, cron, rateLimit, jellyfin,
               value={jellyfin}
               onChange={(v) =>
                 onChange({
-                  jellyfin: v.url || v.token ? (v as ConfigFile['jellyfin']) : undefined,
+                  jellyfin: v.url || v.token || v.enabled !== undefined ? (v as ConfigFile['jellyfin']) : undefined,
                 })
               }
             />
