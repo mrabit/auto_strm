@@ -4,8 +4,8 @@ npm-debug.log*
 .env.*
 dist/
 .cache/
-app/config/default.json
-app/config/dev.json
-app/web/dist/
-app/web/node_modules/
+config/default.json
+config/dev.json
+web/dist/
+web/node_modules/
 data

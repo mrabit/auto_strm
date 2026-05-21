@@ -10,28 +10,28 @@ Dockerized TypeScript app that syncs media metadata from WebDAV and generates `.
 
 ```bash
 # Install dependencies + git hook
-cd app && npm install && cp ../.git/hooks/pre-commit ../.git/hooks/pre-commit
+npm install && cp .git/hooks/pre-commit .git/hooks/pre-commit
 
 # Dev mode (backend only, auto-reload, reads config/dev.json, web server on :3000)
-cd app && npm run dev
+npm run dev
 
 # Dev mode with web UI (backend + frontend HMR, opens on :5173 with API proxy)
-cd app && npm run dev:web
+npm run dev:web
 
 # Pre-commit check: lint + type-check — MUST run before committing
-cd app && npm run check
+npm run check
 
 # Type-check and compile backend (used in Docker, no lint)
-cd app && npm run build
+npm run build
 
 # Build frontend (React → web/dist/)
-cd app && npm run build:web
+npm run build:web
 
 # Build both backend and frontend
-cd app && npm run build:all
+npm run build:all
 
 # Run compiled output
-cd app && npm start
+npm start
 
 # Docker
 docker compose up --build
@@ -39,12 +39,11 @@ docker compose up --build
 WEB_PORT=8080 docker compose up --build
 ```
 
-**Before every commit:** run `cd app && npm run check` (lint + tsc). A git pre-commit hook enforces this automatically.
+**Before every commit:** run `npm run check` (lint + tsc). A git pre-commit hook enforces this automatically.
 
 ## Architecture
 
 ```
-app/
 ├── config/
 │   ├── default.json       # Production config (volume-mounted in Docker)
 │   └── dev.json           # Dev config, only loaded when NODE_ENV=development
