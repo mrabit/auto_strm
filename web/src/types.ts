@@ -15,6 +15,7 @@ export interface RateLimitConfig {
 export interface JellyfinConfig {
   url: string;
   token: string;
+  enabled?: boolean;
 }
 
 export interface LocalConfig {

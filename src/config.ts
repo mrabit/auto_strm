@@ -29,6 +29,7 @@ export interface RateLimitConfig {
 export interface JellyfinConfig {
   url: string;
   token: string;
+  enabled?: boolean;
 }
 
 export interface LocalConfig {
@@ -99,11 +100,11 @@ export function validateConfig(cfg: ConfigFile): void {
     }
 
     const jellyfin = task.jellyfin || cfg.jellyfin;
-    if (jellyfin) {
+    if (jellyfin && jellyfin.enabled !== false) {
       if (!jellyfin.url)
-        throw new Error(`config: ${label}: jellyfin.url is required when jellyfin is set`);
+        throw new Error(`config: ${label}: jellyfin.url is required when jellyfin is enabled`);
       if (!jellyfin.token)
-        throw new Error(`config: ${label}: jellyfin.token is required when jellyfin is set`);
+        throw new Error(`config: ${label}: jellyfin.token is required when jellyfin is enabled`);
     }
   });
 }

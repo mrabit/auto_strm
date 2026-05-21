@@ -91,7 +91,7 @@ async function runTask(task: TaskConfig): Promise<void> {
     const strmGenerated = strmResults.filter((r) => r === 'generated').length;
     const strmSkipped = strmResults.filter((r) => r === 'skipped').length;
 
-    if (strmGenerated > 0 && task.jellyfin) {
+    if (strmGenerated > 0 && task.jellyfin && task.jellyfin.enabled !== false) {
       const { refreshLibrary } = await import('./jellyfin.js');
       await refreshLibrary(task.jellyfin);
     }

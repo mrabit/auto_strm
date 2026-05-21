@@ -1,4 +1,4 @@
-import { Input, Space } from 'antd';
+import { Input, Space, Switch } from 'antd';
 import Addon from './Addon';
 import type { JellyfinConfig } from '../types';
 
@@ -9,12 +9,20 @@ interface Props {
 }
 
 export default function JellyfinFields({ value = {}, inherited, onChange }: Props) {
-  function update(key: keyof JellyfinConfig, val: string) {
-    onChange?.({ ...value, [key]: val || undefined });
+  function update(key: keyof JellyfinConfig, val: string | boolean) {
+    onChange?.({ ...value, [key]: val === '' ? undefined : val });
   }
 
   return (
     <>
+      <div style={{ marginBottom: 8 }}>
+        Enabled{' '}
+        <Switch
+          size="small"
+          checked={value.enabled !== false}
+          onChange={(v) => update('enabled', v)}
+        />
+      </div>
       <Space.Compact style={{ width: '100%' }}>
         <Addon label="URL" />
         <Input
