@@ -74,7 +74,7 @@ export default function ConfigPage({ onDirtyChange, triggerSave, onSaveDone }: P
         value={config.remote}
         cron={config.cron}
         rateLimit={config.rateLimit}
-        onChange={({ remote, cron, rateLimit }) => update({ remote, cron, rateLimit })}
+        onChange={(patch) => update(patch)}
       />
 
       <h3 style={{ marginBottom: 16 }}>Tasks</h3>
