@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import TaskItemEditor from './TaskItemEditor';
-import type { RemoteConfig, RateLimitConfig, RawTaskConfig } from '../types';
+import type { RemoteConfig, RateLimitConfig, JellyfinConfig, RawTaskConfig } from '../types';
 
 function uid(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -22,7 +22,7 @@ function emptyTask(): RawTaskConfig {
 
 interface Props {
   tasks: RawTaskConfig[];
-  defaults?: { remote?: RemoteConfig; cron?: string; rateLimit?: RateLimitConfig };
+  defaults?: { remote?: RemoteConfig; cron?: string; rateLimit?: RateLimitConfig; jellyfin?: JellyfinConfig };
   onChange: (tasks: RawTaskConfig[]) => void;
 }
 

@@ -26,6 +26,11 @@ export interface RateLimitConfig {
   intervalMs: number;
 }
 
+export interface JellyfinConfig {
+  url: string;
+  token: string;
+}
+
 export interface LocalConfig {
   path: string;
 }
@@ -37,6 +42,7 @@ export interface TaskConfig {
   cron: string;
   rateLimit: RateLimitConfig;
   enabled: boolean;
+  jellyfin?: JellyfinConfig;
 }
 
 export interface RawTaskConfig {
@@ -46,6 +52,7 @@ export interface RawTaskConfig {
   cron?: string;
   rateLimit?: Partial<RateLimitConfig>;
   enabled?: boolean;
+  jellyfin?: JellyfinConfig;
   _key?: string;
 }
 
@@ -53,6 +60,7 @@ export interface ConfigFile {
   remote?: RemoteConfig;
   cron?: string;
   rateLimit?: Partial<RateLimitConfig>;
+  jellyfin?: JellyfinConfig;
   tasks: RawTaskConfig[];
 }
 
@@ -89,6 +97,14 @@ export function validateConfig(cfg: ConfigFile): void {
     } catch {
       throw new Error(`config: ${label}: invalid cron expression "${cron}"`);
     }
+
+    const jellyfin = task.jellyfin || cfg.jellyfin;
+    if (jellyfin) {
+      if (!jellyfin.url)
+        throw new Error(`config: ${label}: jellyfin.url is required when jellyfin is set`);
+      if (!jellyfin.token)
+        throw new Error(`config: ${label}: jellyfin.token is required when jellyfin is set`);
+    }
   });
 }
 
@@ -110,6 +126,8 @@ export function load(): TaskConfig[] {
     merged.path = '/' + merged.path!.replace(/^\/+|\/+$/g, '');
     merged.syncMetadata ??= true;
 
+    const jellyfin = task.jellyfin || cfg.jellyfin;
+
     const rateLimit: RateLimitConfig = {
       ...DEFAULT_RATE_LIMIT,
       ...commonRateLimit,
@@ -123,6 +141,7 @@ export function load(): TaskConfig[] {
       cron: cron!,
       rateLimit,
       enabled: task.enabled ?? true,
+      jellyfin,
     };
   });
 }

@@ -12,6 +12,11 @@ export interface RateLimitConfig {
   intervalMs?: number;
 }
 
+export interface JellyfinConfig {
+  url: string;
+  token: string;
+}
+
 export interface LocalConfig {
   path: string;
 }
@@ -23,6 +28,7 @@ export interface RawTaskConfig {
   local: LocalConfig;
   cron?: string;
   rateLimit?: RateLimitConfig;
+  jellyfin?: JellyfinConfig;
   _key?: string;
 }
 
@@ -30,6 +36,7 @@ export interface ConfigFile {
   remote?: RemoteConfig;
   cron?: string;
   rateLimit?: RateLimitConfig;
+  jellyfin?: JellyfinConfig;
   tasks: RawTaskConfig[];
 }
 

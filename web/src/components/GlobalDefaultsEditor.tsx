@@ -2,16 +2,18 @@ import { Collapse, Input, Space } from 'antd';
 import Addon from './Addon';
 import RemoteFieldsEditor from './RemoteFieldsEditor';
 import RateLimitFields from './RateLimitFields';
+import JellyfinFields from './JellyfinFields';
 import type { ConfigFile } from '../types';
 
 interface Props {
   value?: ConfigFile['remote'];
   cron?: string;
   rateLimit?: ConfigFile['rateLimit'];
-  onChange: (patch: { remote?: ConfigFile['remote']; cron?: string; rateLimit?: ConfigFile['rateLimit'] }) => void;
+  jellyfin?: ConfigFile['jellyfin'];
+  onChange: (patch: { remote?: ConfigFile['remote']; cron?: string; rateLimit?: ConfigFile['rateLimit']; jellyfin?: ConfigFile['jellyfin'] }) => void;
 }
 
-export default function GlobalDefaultsEditor({ value, cron, rateLimit, onChange }: Props) {
+export default function GlobalDefaultsEditor({ value, cron, rateLimit, jellyfin, onChange }: Props) {
   const items = [
     {
       key: 'defaults',
@@ -36,6 +38,17 @@ export default function GlobalDefaultsEditor({ value, cron, rateLimit, onChange 
             <RateLimitFields
               value={rateLimit}
               onChange={(v) => onChange({ rateLimit: v })}
+            />
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <div style={{ marginBottom: 4, color: '#888', fontSize: 12 }}>Jellyfin</div>
+            <JellyfinFields
+              value={jellyfin}
+              onChange={(v) =>
+                onChange({
+                  jellyfin: v.url || v.token ? (v as ConfigFile['jellyfin']) : undefined,
+                })
+              }
             />
           </div>
         </>

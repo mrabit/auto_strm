@@ -74,13 +74,14 @@ export default function ConfigPage({ onDirtyChange, triggerSave, onSaveDone }: P
         value={config.remote}
         cron={config.cron}
         rateLimit={config.rateLimit}
+        jellyfin={config.jellyfin}
         onChange={(patch) => update(patch)}
       />
 
       <h3 style={{ marginBottom: 16 }}>Tasks</h3>
       <TaskListEditor
         tasks={config.tasks}
-        defaults={{ remote: config.remote, cron: config.cron, rateLimit: config.rateLimit }}
+        defaults={{ remote: config.remote, cron: config.cron, rateLimit: config.rateLimit, jellyfin: config.jellyfin }}
         onChange={(tasks) => update({ tasks })}
       />
     </div>

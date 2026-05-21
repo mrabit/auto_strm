@@ -75,6 +75,33 @@ export function startServer(
     res.json({ status: 'ok', uptime: process.uptime() });
   });
 
+  app.post('/api/webhook', (req, res) => {
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      return res.status(400).json({ error: 'Request body must be a JSON object' });
+    }
+    const { type, data } = req.body;
+    const taskName = (req.query.task as string) || undefined;
+
+    console.log(
+      `[webhook] received event type="${type || 'unknown'}" task="${taskName || '(none)'}"`,
+    );
+
+    if (taskName) {
+      if (schedulerHandle.runNow(taskName)) {
+        console.log(`[webhook] triggered sync for task "${taskName}"`);
+        return res.json({ success: true, action: 'sync_triggered', task: taskName });
+      }
+      console.log(`[webhook] task "${taskName}" not found`);
+      return res.status(404).json({ error: `Task "${taskName}" not found` });
+    }
+
+    // Log the event data for informational purposes
+    if (data) {
+      console.log(`[webhook] data:`, JSON.stringify(data).slice(0, 500));
+    }
+    res.json({ success: true, action: 'logged' });
+  });
+
   app.get('/api/logs', (_req, res) => {
     res.json(getLogs());
   });

@@ -53,7 +53,9 @@ WEB_PORT=8080 docker compose up --build
 │   ├── server.ts          # Express API server: GET/PUT /api/config, static file serving + SPA fallback
 │   ├── scanner.ts         # Recursively lists WebDAV dir, classifies files
 │   ├── syncer.ts          # Downloads metadata, generates .strm files (buildStrmUrl)
-│   └── scheduler.ts       # Cron scheduling, fires immediately then on schedule, returns stop handle
+│   ├── scheduler.ts       # Cron scheduling, fires immediately then on schedule, returns stop handle
+│   ├── jellyfin.ts        # Jellyfin API client: refreshLibrary() calls POST /Library/Refresh
+│   └── logger.ts          # Ring-buffer console capture for log viewer
 ├── web/
 │   ├── src/
 │   │   ├── main.tsx       # React entry point
@@ -67,7 +69,9 @@ WEB_PORT=8080 docker compose up --build
 │   │       ├── TaskListEditor.tsx        # Task array: add/remove cards
 │   │       ├── TaskItemEditor.tsx        # Single task card with collapsible fields
 │   │       ├── RemoteFieldsEditor.tsx    # Reusable remote config form fields
-│   │       └── RateLimitFields.tsx       # Concurrency/interval input fields
+│   │       ├── RateLimitFields.tsx       # Concurrency/interval input fields
+│   │       ├── JellyfinFields.tsx        # Reusable Jellyfin url/token input fields
+│   │       └── Addon.tsx                 # Compact input label prefix
 │   ├── package.json
 │   ├── vite.config.ts
 │   └── dist/               # Built frontend (served by Express in production)
@@ -188,6 +192,55 @@ Metadata downloads and strm generation run concurrently within each task. Contro
 - **Error cleanup**: partial downloads are deleted on failure so the next run retries cleanly.
 - **Graceful shutdown**: on SIGTERM/SIGINT, the HTTP server is closed (if running), cron jobs are stopped, and in-flight tasks allowed to finish before exit (30s timeout, then force exit).
 - **Re-entrance guard**: if a cron trigger fires while the previous run of the same task is still in progress, the new trigger is skipped.
+
+## API endpoints
+
+Express routes:
+- `GET /api/config` — raw config JSON
+- `PUT /api/config` — validate, write atomically, reload scheduler
+- `POST /api/tasks/:name/sync` — trigger a single task run by name
+- `POST /api/config/reload` — re-read config file and reload scheduler
+- `POST /api/webhook?task=name` — receive webhook, log event, optionally trigger sync
+- `GET /api/health` — uptime status
+- `GET /api/logs` — ring-buffer logs
+
+## Webhook
+
+`POST /api/webhook` receives webhook events (e.g. from MoviePilot). Body format: `{"type": "TransferFinished", "data": {...}}`.
+
+**Flow:**
+1. Prints `[webhook] received` log
+2. If `?task=name` query param set → calls `schedulerHandle.runNow(name)`
+3. `runNow` looks up the task and fires `runTask(task)` asynchronously
+4. `runTask` → `createClient` → `scan()` → `syncMetadata()` → `generateStrm()` → (if strmGenerated > 0 && task.jellyfin) → `refreshLibrary()`
+5. HTTP response returns immediately — task runs in background
+6. Re-entrance guard: if the same task is already running, the new trigger is silently skipped
+
+## Jellyfin integration
+
+Optional `jellyfin` config (url + token) at global level and per-task. Merge: `task.jellyfin || cfg.jellyfin` (whole-object override). When a task generates new `.strm` files, calls `POST {url}/Library/Refresh` with `X-MediaBrowser-Token` header. Failure logs a warning and does not fail the sync.
+
+## Frontend config field checklist
+
+When adding a new config field (e.g. `jellyfin`), update ALL of:
+1. `web/src/types.ts` — add interface + fields to `ConfigFile` and `RawTaskConfig`
+2. Create/reuse a Fields component (follow `RateLimitFields` or `JellyfinFields` pattern)
+3. `GlobalDefaultsEditor.tsx` — add input section, pass through props
+4. `TaskItemEditor.tsx` — add collapsible section with inherited placeholder
+5. `ConfigPage.tsx` — pass field to both editors
+6. `TaskListEditor.tsx` — add to `defaults` prop type
+
+## Verification
+
+- `npm run check` — backend only: lint + tsc
+- `npm run build:web` — frontend type-check + vite build (run separately)
+- Run both before committing frontend changes
+
+## Prettier
+
+```bash
+npx prettier --write src/config.ts src/jellyfin.ts  # auto-fix formatting
+```
 
 ## Key libraries
 

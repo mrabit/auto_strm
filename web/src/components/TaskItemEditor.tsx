@@ -4,14 +4,15 @@ import { DeleteOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import Addon from './Addon';
 import RemoteFieldsEditor from './RemoteFieldsEditor';
 import RateLimitFields from './RateLimitFields';
+import JellyfinFields from './JellyfinFields';
 import { syncTask } from '../api';
-import type { RemoteConfig, RateLimitConfig, RawTaskConfig } from '../types';
+import type { RemoteConfig, RateLimitConfig, JellyfinConfig, RawTaskConfig } from '../types';
 
 interface Props {
   task: RawTaskConfig;
   index: number;
   isNew?: boolean;
-  defaults?: { remote?: RemoteConfig; cron?: string; rateLimit?: RateLimitConfig };
+  defaults?: { remote?: RemoteConfig; cron?: string; rateLimit?: RateLimitConfig; jellyfin?: JellyfinConfig };
   onChange: (task: RawTaskConfig) => void;
   onDelete: () => void;
 }
@@ -135,6 +136,23 @@ export default function TaskItemEditor({ task, index, isNew, defaults, onChange,
                   />
                 </div>
               </>
+            ),
+          },
+          {
+            key: 'jellyfin',
+            label: 'Jellyfin',
+            style: panelStyle,
+            children: (
+              <JellyfinFields
+                value={task.jellyfin}
+                inherited={defaults?.jellyfin}
+                onChange={(v) =>
+                  onChange({
+                    ...task,
+                    jellyfin: v.url || v.token ? (v as JellyfinConfig) : undefined,
+                  })
+                }
+              />
             ),
           },
         ]}

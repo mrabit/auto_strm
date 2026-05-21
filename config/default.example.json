@@ -10,6 +10,10 @@
     "concurrency": 5,
     "intervalMs": 200
   },
+  "jellyfin": {
+    "url": "http://your-jellyfin:8096",
+    "token": "your-api-token"
+  },
   "tasks": [
     {
       "name": "example",
@@ -20,6 +24,15 @@
       },
       "local": {
         "path": "/data/example"
+      },
+      "cron": "0 */6 * * *",
+      "rateLimit": {
+        "concurrency": 3,
+        "intervalMs": 500
+      },
+      "jellyfin": {
+        "url": "http://another-jellyfin:8096",
+        "token": "another-token"
       }
     }
   ]

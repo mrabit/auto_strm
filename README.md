@@ -1,6 +1,6 @@
 # Auto STRM
 
-从 CloudDrive2 WebDAV 同步媒体元数据到本地，并自动生成 `.strm` 流媒体链接文件。
+从 CloudDrive2 WebDAV 同步媒体元数据到本地，自动生成 `.strm` 流媒体链接文件，支持 Web UI 管理配置。
 
 ## 功能
 
@@ -8,51 +8,64 @@
 - 下载元数据文件（nfo、海报、字幕、音轨等）到本地
 - 为视频文件自动生成 `.strm` 链接，支持 CloudDrive2 流媒体 URL 格式
 - 增量同步，已存在的文件自动跳过，strm 内容不变则跳过写入
-- 并发处理，默认 5 个并发，请求间隔 200ms，避免触发服务端限频
+- 并发处理，并发数和请求间隔可配置（默认 5 并发，200ms 间隔）
 - 支持多任务配置，独立设置同步目录和定时规则
-- 任务可单独启用/禁用（`enabled` 字段，默认 `true`）
+- 任务可单独启用/禁用，配置热更新无需重启
+- **Web 管理界面**：浏览器内管理配置，实时编辑保存
+- **REST API**：提供配置读写、触发同步、重载配置等接口
+- **Webhook 接口**：接收第三方（如 MoviePilot）的 webhook 事件，自动触发同步
+- **Jellyfin 集成**：新增 strm 文件后自动刷新 Jellyfin 媒体库
 - 定时执行，容器启动立即同步一次
-- 配置文件热更新，修改后自动重载，无需重启
 - 优雅退出，收到停止信号后等待当前任务完成再退出
+- **日志查看器**：Web UI 内查看实时日志，支持 ANSI 颜色渲染
 
 ## 快速开始
 
 ```bash
 # 1. 创建配置文件
-cp app/config/default.example.json app/config/default.json
-# 编辑 default.json，填入你的 CloudDrive2 地址和账号密码
+cp config/default.json.example config/default.json
+# 编辑 default.json，填入 CloudDrive2 地址和账号密码
 
 # 2. 安装依赖 + 初始化 git hook
-cd app && npm install
+npm install
 
-# 3. 开发模式（本地运行，读取 config/dev.json）
-# 创建 dev.json 配置文件，然后：
+# 3. 开发模式（无 Web UI，读取 config/dev.json，API 端口 :3000）
 npm run dev
 
-# 4. 提交前检查（lint + 类型检查，git pre-commit hook 自动执行）
+# 4. 开发模式（含 Web UI，前端 HMR，访问 :5173）
+npm run dev:web
+
+# 5. 提交前检查（lint + tsc）
 npm run check
 
-# 5. 生产模式（Docker）
+# 6. 生产模式（Docker）
 docker compose up -d --build
+# 自定义 Web 端口
+WEB_PORT=8080 docker compose up -d --build
 ```
 
 ## 配置
 
 ```jsonc
 {
-  // 顶层 remote 为所有任务共享的公共连接配置，每个 task 可覆盖任意字段
+  // 公共连接配置，每个 task 可覆盖任意字段
   "remote": {
     "url": "https://your-server.com/dav",
     "username": "your-account",
     "password": "your-password",
     "publicUrl": "https://your-server.com"
   },
-  // 顶层 cron 为所有任务共享的定时规则，每个 task 可覆盖
+  // 公共定时规则，每个 task 可覆盖
   "cron": "0 */6 * * *",
-  // 顶层 rateLimit 为所有任务共享的请求频率控制，每个 task 可覆盖
+  // 公共请求频率控制，每个 task 可覆盖
   "rateLimit": {
     "concurrency": 5,
     "intervalMs": 200
+  },
+  // 可选：Jellyfin 服务器，新增 strm 后自动刷新媒体库
+  "jellyfin": {
+    "url": "http://your-jellyfin:8096",
+    "token": "your-api-token"
   },
   "tasks": [
     {
@@ -62,8 +75,11 @@ docker compose up -d --build
         "path": "/cloud-drive/Media/剧集",
         "syncMetadata": false
       },
-      "local": {
-        "path": "/data/剧集"
+      "local": { "path": "/data/剧集" },
+      // 可选：覆盖全局 jellyfin 配置
+      "jellyfin": {
+        "url": "http://another-jellyfin:8096",
+        "token": "another-token"
       }
     }
   ]
@@ -76,20 +92,44 @@ docker compose up -d --build
 | `remote.path` | 远端要扫描的目录 |
 | `remote.publicUrl` | 可选，strm 链接使用的域名端口，不填则自动取 url 的 origin |
 | `remote.syncMetadata` | 默认 `true`，设为 `false` 只生成 strm 不下载元数据 |
-| `local.path` | 本地存储路径，Docker 内对应 `/data` |
-| `cron` | 定时表达式，启动时立即执行一次。顶层定义后任务可省略 |
+| `local.path` | 本地存储路径 |
+| `cron` | 定时表达式，启动时立即执行一次 |
 | `enabled` | 默认 `true`，设为 `false` 则跳过该任务 |
 | `rateLimit.concurrency` | 并发下载数，默认 5 |
 | `rateLimit.intervalMs` | 请求间隔（毫秒），默认 200 |
+| `jellyfin.url` | Jellyfin 服务地址 |
+| `jellyfin.token` | Jellyfin API Token |
 
-顶层 `remote`、`cron`、`rateLimit` 均为可选，省略时每个 task 必须填写对应字段。
+顶层 `remote`、`cron`、`rateLimit`、`jellyfin` 均可选，省略时每个 task 必须填写对应字段。
+Task 级别的 `jellyfin` 覆盖全局配置（整对象覆盖，非逐字段合并）。
 
-默认配置文件不会被 git 追踪，首次使用需从 `default.example.json` 复制。
+## Webhook
+
+接收外部系统的 webhook 事件，自动触发同步任务。
+
+```
+POST /api/webhook?task=任务名
+Body: {"type": "TransferFinished", "data": {...}}
+```
+
+收到 webhook 后查找对应任务触发同步，HTTP 响应立即返回，任务在后台异步执行。
+同名任务正在运行时，新触发静默跳过。
+
+## 环境变量
+
+| 变量 | 说明 |
+|------|------|
+| `WEB_PORT` | 设置后启用 Web UI 和 API 服务，默认不启用 |
+| `NODE_ENV` | `development` 时读 `config/dev.json` |
+| `TZ` | 容器时区，默认 `Asia/Shanghai` |
 
 ## 技术栈
 
 - TypeScript + Node.js 22
-- Docker 容器化（两阶段构建）
+- Docker 容器化
 - `webdav` (v5) — WebDAV 客户端
 - `cron` (v3) — 定时调度
+- `express` (v5) — HTTP 服务 + REST API
+- `react` + `antd` (v5) — Web 管理界面
+- `vite` (v5) — 前端构建
 - `tsx` — 开发模式热更新

@@ -16,10 +16,41 @@
 - 配置文件热更新，修改后自动重载任务配置，无需重启
 - 定时执行，启动时立即执行一次
 - 监听 SIGTERM/SIGINT 信号，优雅退出（停止定时器，等待当前任务完成）
-- `NODE_ENV=development` 时读 `config/dev.json`，否则读 `config/default.json`
+
+## Web 管理界面
+
+- 可选启用（设置 `WEB_PORT` 环境变量），浏览器内管理所有配置
+- 全局默认值面板：公共 remote、cron、rateLimit、jellyfin 配置
+- 任务列表：新增/删除/启用/禁用任务，每个任务独立展开编辑
+- 即时保存：修改后保存自动校验并重载调度器
+- 手动触发：Web UI 内可直接触发单个任务同步
+- 日志查看器：模态窗口查看实时日志，支持 ANSI 颜色渲染
+
+## REST API
+
+- `GET /api/config` — 读取完整配置 JSON
+- `PUT /api/config` — 校验并写入配置，自动重载调度器
+- `POST /api/tasks/:name/sync` — 手动触发单个任务同步
+- `POST /api/config/reload` — 强制从文件重载配置
+- `POST /api/webhook?task=name` — 接收 webhook 事件，触发任务同步
+- `GET /api/health` — 服务健康检查
+- `GET /api/logs` — 获取最近日志
+
+## Webhook
+
+接收外部系统（如 MoviePilot）的 webhook 事件，自动触发对应任务的同步。
+请求体格式：`{"type": "事件类型", "data": {...}}`。
+同名任务正在运行时重复触发静默跳过。
+
+## Jellyfin 集成
+
+可选配置 Jellyfin 服务器（url + token），任务生成新 `.strm` 文件后自动调用 `POST /Library/Refresh` 刷新媒体库。
+配置支持全局默认，每个任务可覆盖。刷新失败仅记录警告，不影响同步流程。
 
 ## 开发
 
-- `npm run dev` — 开发模式热更新
-- `npm run check` — 提交前检查（lint + 类型检查），git pre-commit hook 自动执行
-- `npm run build` — 仅编译（Docker 构建用，不含 lint）
+- `npm run dev` — 开发模式热更新（仅后端）
+- `npm run dev:web` — 开发模式（后端 + 前端 HMR）
+- `npm run check` — 提交前检查（lint + tsc），仅后端
+- `npm run build:web` — 前端类型检查 + 打包
+- `npm run build:all` — 前后端全量构建
