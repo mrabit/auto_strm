@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { CronJob } from 'cron';
 
 export interface RemoteConfig {
   url?: string;
@@ -38,16 +39,17 @@ export interface TaskConfig {
   enabled: boolean;
 }
 
-interface RawTaskConfig {
+export interface RawTaskConfig {
   name: string;
   remote: RemoteConfig;
   local: LocalConfig;
   cron?: string;
   rateLimit?: Partial<RateLimitConfig>;
   enabled?: boolean;
+  _key?: string;
 }
 
-interface ConfigFile {
+export interface ConfigFile {
   remote?: RemoteConfig;
   cron?: string;
   rateLimit?: Partial<RateLimitConfig>;
@@ -62,22 +64,18 @@ const DEFAULT_RATE_LIMIT: RateLimitConfig = {
   intervalMs: 200,
 };
 
-export function load(): TaskConfig[] {
-  const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
-  const cfg = JSON.parse(raw) as ConfigFile;
-
+export function validateConfig(cfg: ConfigFile): void {
   if (!cfg.tasks || !Array.isArray(cfg.tasks) || cfg.tasks.length === 0) {
     throw new Error('config: "tasks" must be a non-empty array');
   }
 
   const common = cfg.remote || {};
-  const commonRateLimit: Partial<RateLimitConfig> = cfg.rateLimit || {};
   const commonCron = cfg.cron;
 
-  return cfg.tasks.map((task, i): TaskConfig => {
+  cfg.tasks.forEach((task, i) => {
     const merged: RemoteConfig = { ...common, ...task.remote };
-
     const label = task.name || `task[${i}]`;
+
     if (!merged.url) throw new Error(`config: ${label}: remote.url is required`);
     if (!merged.username) throw new Error(`config: ${label}: remote.username is required`);
     if (!merged.password) throw new Error(`config: ${label}: remote.password is required`);
@@ -86,9 +84,30 @@ export function load(): TaskConfig[] {
 
     const cron = task.cron || commonCron;
     if (!cron) throw new Error(`config: ${label}: cron is required`);
+    try {
+      new CronJob(cron, () => {});
+    } catch {
+      throw new Error(`config: ${label}: invalid cron expression "${cron}"`);
+    }
+  });
+}
 
-    merged.url = merged.url.replace(/\/+$/, '');
-    merged.path = '/' + merged.path.replace(/^\/+|\/+$/g, '');
+export function load(): TaskConfig[] {
+  const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
+  const cfg = JSON.parse(raw) as ConfigFile;
+
+  validateConfig(cfg);
+
+  const common = cfg.remote || {};
+  const commonRateLimit: Partial<RateLimitConfig> = cfg.rateLimit || {};
+  const commonCron = cfg.cron;
+
+  return cfg.tasks.map((task): TaskConfig => {
+    const merged: RemoteConfig = { ...common, ...task.remote };
+    const cron = task.cron || commonCron;
+
+    merged.url = merged.url!.replace(/\/+$/, '');
+    merged.path = '/' + merged.path!.replace(/^\/+|\/+$/g, '');
     merged.syncMetadata ??= true;
 
     const rateLimit: RateLimitConfig = {
@@ -101,7 +120,7 @@ export function load(): TaskConfig[] {
       name: task.name,
       remote: merged as ResolvedRemoteConfig,
       local: { path: path.resolve(task.local.path) },
-      cron,
+      cron: cron!,
       rateLimit,
       enabled: task.enabled ?? true,
     };

@@ -6,4 +6,6 @@ dist/
 .cache/
 app/config/default.json
 app/config/dev.json
+app/web/dist/
+app/web/node_modules/
 data

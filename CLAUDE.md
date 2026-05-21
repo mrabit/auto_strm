@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-Dockerized TypeScript app that syncs media metadata from WebDAV and generates `.strm` files for video files. Runs on a cron schedule. Supports multiple sync tasks with independent configs.
+Dockerized TypeScript app that syncs media metadata from WebDAV and generates `.strm` files for video files. Runs on a cron schedule. Supports multiple sync tasks with independent configs. Includes an optional web UI (React + Ant Design) for browser-based config management.
 
 ## Commands
 
@@ -12,20 +12,31 @@ Dockerized TypeScript app that syncs media metadata from WebDAV and generates `.
 # Install dependencies + git hook
 cd app && npm install && cp ../.git/hooks/pre-commit ../.git/hooks/pre-commit
 
-# Dev mode with auto-reload (reads config/dev.json)
+# Dev mode (backend only, auto-reload, reads config/dev.json, web server on :3000)
 cd app && npm run dev
+
+# Dev mode with web UI (backend + frontend HMR, opens on :5173 with API proxy)
+cd app && npm run dev:web
 
 # Pre-commit check: lint + type-check — MUST run before committing
 cd app && npm run check
 
-# Type-check and compile (used in Docker, no lint)
+# Type-check and compile backend (used in Docker, no lint)
 cd app && npm run build
+
+# Build frontend (React → web/dist/)
+cd app && npm run build:web
+
+# Build both backend and frontend
+cd app && npm run build:all
 
 # Run compiled output
 cd app && npm start
 
 # Docker
 docker compose up --build
+# With custom web port
+WEB_PORT=8080 docker compose up --build
 ```
 
 **Before every commit:** run `cd app && npm run check` (lint + tsc). A git pre-commit hook enforces this automatically.
@@ -38,21 +49,39 @@ app/
 │   ├── default.json       # Production config (volume-mounted in Docker)
 │   └── dev.json           # Dev config, only loaded when NODE_ENV=development
 ├── src/
-│   ├── index.ts           # Entry: loads config, starts scheduler, concurrency & graceful shutdown
-│   ├── config.ts          # Reads & validates config, selects file by NODE_ENV
+│   ├── index.ts           # Entry: loads config, starts scheduler, starts web server (if WEB_PORT set), graceful shutdown
+│   ├── config.ts          # Reads & validates config, selects file by NODE_ENV, exports validateConfig()
+│   ├── server.ts          # Express API server: GET/PUT /api/config, static file serving + SPA fallback
 │   ├── scanner.ts         # Recursively lists WebDAV dir, classifies files
 │   ├── syncer.ts          # Downloads metadata, generates .strm files (buildStrmUrl)
 │   └── scheduler.ts       # Cron scheduling, fires immediately then on schedule, returns stop handle
+├── web/
+│   ├── src/
+│   │   ├── main.tsx       # React entry point
+│   │   ├── App.tsx        # Ant Design layout: header with save/reload, content area
+│   │   ├── api.ts         # fetchConfig() / saveConfig() — REST client for /api/config
+│   │   ├── types.ts       # ConfigFile, RawTaskConfig, etc. (mirrors backend types)
+│   │   ├── pages/
+│   │   │   └── ConfigPage.tsx  # Main config editor: global defaults + task list
+│   │   └── components/
+│   │       ├── GlobalDefaultsEditor.tsx  # Top-level remote/cron/rateLimit form
+│   │       ├── TaskListEditor.tsx        # Task array: add/remove cards
+│   │       ├── TaskItemEditor.tsx        # Single task card with collapsible fields
+│   │       ├── RemoteFieldsEditor.tsx    # Reusable remote config form fields
+│   │       └── RateLimitFields.tsx       # Concurrency/interval input fields
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── dist/               # Built frontend (served by Express in production)
 ├── tsconfig.json
 ├── package.json
 └── data/                  # Local sync destination (Docker volume mount)
 ```
 
-**Flow**: `index.ts` → `config.load()` → filter enabled tasks → `scheduler.start(tasks, runTaskTracked)` → watch config with `fs.watchFile` for hot-reload → for each task: `createClient(url, {username, password})` → `scanner.scan()` → (if syncMetadata) concurrent `syncer.syncMetadata()` → concurrent `syncer.generateStrm()` → log stats. On SIGTERM/SIGINT: stop cron jobs, wait for in-flight tasks, exit.
+**Flow**: `index.ts` → `config.load()` → filter enabled tasks → `scheduler.start(tasks, runTaskTracked)` → if `WEB_PORT` set, `server.startServer()` → watch config with `fs.watchFile` for hot-reload → for each task: `createClient(url, {username, password})` → `scanner.scan()` → (if syncMetadata) concurrent `syncer.syncMetadata()` → concurrent `syncer.generateStrm()` → log stats. On SIGTERM/SIGINT: close HTTP server (if any), stop cron jobs, wait for in-flight tasks, exit.
 
 ## Config schema
 
-Top-level `remote`, `cron`, and `rateLimit` provide common defaults shared across tasks. Each task can override any field. If top-level defaults are omitted, each task must supply all required fields.
+Top-level `remote`, `cron`, and `rateLimit` provide common defaults shared across tasks. Each task can override any field. `remote.path` and `local.path` must be defined per-task — they cannot be inherited from global defaults.
 
 ```jsonc
 {
@@ -61,6 +90,7 @@ Top-level `remote`, `cron`, and `rateLimit` provide common defaults shared acros
     "username": "your-account",
     "password": "your-password",
     "publicUrl": "https://your-server.com"  // optional: override streaming host
+    // path is NOT allowed here — must be defined per-task
   },
   "cron": "0 */6 * * *",            // optional: common cron, tasks inherit if omitted
   "rateLimit": {                     // optional: common rate limit defaults
@@ -72,7 +102,7 @@ Top-level `remote`, `cron`, and `rateLimit` provide common defaults shared acros
       "name": "example",
       "enabled": true,                     // optional, defaults to true
       "remote": {
-        "path": "/cloud-drive/Media/Movies",  // required per task (or from common)
+        "path": "/cloud-drive/Media/Movies",  // required per task
         "syncMetadata": true                  // optional, defaults to true
         // url/username/password can be overridden per task if needed
       },
@@ -146,21 +176,27 @@ Metadata downloads and strm generation run concurrently within each task. Contro
 ## Key types
 
 - `TaskConfig` / `RemoteConfig` / `ResolvedRemoteConfig` / `LocalConfig` — defined in `config.ts`
+- `ConfigFile` / `RawTaskConfig` — raw (pre-merge) config types, exported for server and frontend use
 - `MetadataFile` / `VideoFile` / `ScanResult` — defined in `scanner.ts`
 - `SchedulerHandle` — `{ stop: () => void; update: (tasks: TaskConfig[]) => void }`, returned by `scheduler.start()`
 
 ## Key behaviors
 
+- **Web server (opt-in)**: set `WEB_PORT` env var to enable the web UI. Express serves the React SPA on `/` and REST API on `/api/*`. When `WEB_PORT` is unset, the app runs headless as before.
+- **Config management API**: `GET /api/config` returns the raw config JSON. `PUT /api/config` validates the body, writes atomically (tmp + rename), and triggers scheduler reload. Passwords are returned in plain text — the frontend `Input.Password` component handles visual masking.
 - **Config hot-reload**: `fs.watchFile` monitors the config file. On change, config is reloaded, cron jobs are rebuilt. Existing tasks only get updated cron schedules (no immediate re-run); genuinely new tasks fire immediately. Parse errors leave old jobs running untouched.
 - **Incremental sync**: metadata files are skipped if the local file already exists (existence-only check, no size/mtime comparison). `.strm` files are skipped if content matches.
 - **Error cleanup**: partial downloads are deleted on failure so the next run retries cleanly.
-- **Graceful shutdown**: on SIGTERM/SIGINT, cron jobs are stopped and in-flight tasks allowed to finish before exit (30s timeout, then force exit).
+- **Graceful shutdown**: on SIGTERM/SIGINT, the HTTP server is closed (if running), cron jobs are stopped, and in-flight tasks allowed to finish before exit (30s timeout, then force exit).
 - **Re-entrance guard**: if a cron trigger fires while the previous run of the same task is still in progress, the new trigger is skipped.
 
 ## Key libraries
 
 - `webdav` (v5) — WebDAV client: `createClient`, `getDirectoryContents`, `createReadStream`
 - `cron` (v3) — `CronJob` for scheduling
+- `express` (v5) — HTTP server for web UI and REST API
+- `react` + `antd` (v5) — web UI (in `app/web/`)
+- `vite` (v5) — frontend build tool
 - `tsx` — TypeScript runner for dev mode
 
 ## File classification

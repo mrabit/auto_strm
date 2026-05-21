@@ -2,7 +2,11 @@ services:
   app:
     build: .
     container_name: auto_strm
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      - WEB_PORT=3000
     volumes:
-      - ./app/config:/app/config:ro
+      - ./app/config:/app/config
       - ./app/data:/data
     restart: unless-stopped

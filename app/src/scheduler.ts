@@ -4,6 +4,7 @@ import type { TaskConfig } from './config';
 export interface SchedulerHandle {
   stop: () => void;
   update: (tasks: TaskConfig[]) => void;
+  runNow: (name: string) => boolean;
 }
 
 export function start(
@@ -12,6 +13,7 @@ export function start(
 ): SchedulerHandle {
   let jobs: { job: CronJob; name: string }[] = [];
   let knownNames = new Set<string>();
+  let currentTasks = tasks;
 
   function applyJobs(newTasks: TaskConfig[], fireAll: boolean) {
     for (const { job } of jobs) job.stop();
@@ -29,6 +31,7 @@ export function start(
 
     jobs = nextJobs;
     knownNames = new Set(newTasks.map((t) => t.name));
+    currentTasks = newTasks;
   }
 
   applyJobs(tasks, true);
@@ -36,5 +39,13 @@ export function start(
   return {
     stop: () => jobs.forEach(({ job }) => job.stop()),
     update: (newTasks: TaskConfig[]) => applyJobs(newTasks, false),
+    runNow: (name: string) => {
+      const task = currentTasks.find((t) => t.name === name);
+      if (task) {
+        runTask(task);
+        return true;
+      }
+      return false;
+    },
   };
 }

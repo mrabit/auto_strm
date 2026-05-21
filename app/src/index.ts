@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import type { Server } from 'node:http';
 import { createClient } from 'webdav';
 import { load, CONFIG_PATH } from './config';
 import { scan } from './scanner';
@@ -122,86 +123,104 @@ async function runWithLimit<T, R>(
   return results;
 }
 
-const allTasks = load();
-const tasks = allTasks.filter((t) => t.enabled);
-if (tasks.length < allTasks.length) {
-  const skipped = allTasks
-    .filter((t) => !t.enabled)
-    .map((t) => t.name)
-    .join(', ');
-  console.log(`${dim('skipped disabled tasks:')} ${skipped}`);
-}
-console.log(`loaded ${bold(String(tasks.length))} task(s)`);
-
-let running = 0;
-const runningTasks = new Set<string>();
-let shuttingDown = false;
-
-async function runTaskTracked(task: TaskConfig): Promise<void> {
-  if (shuttingDown || runningTasks.has(task.name)) return;
-  runningTasks.add(task.name);
-  running++;
-  try {
-    await runTask(task);
-  } finally {
-    running--;
-    runningTasks.delete(task.name);
+function loadEnabledTasks() {
+  const all = load();
+  const enabled = all.filter((t) => t.enabled);
+  if (enabled.length < all.length) {
+    const skipped = all
+      .filter((t) => !t.enabled)
+      .map((t) => t.name)
+      .join(', ');
+    console.log(`${dim('skipped disabled tasks:')} ${skipped}`);
   }
+  return enabled;
 }
 
-const handle: SchedulerHandle = start(tasks, runTaskTracked);
+async function main() {
+  const tasks = loadEnabledTasks();
+  console.log(`loaded ${bold(String(tasks.length))} task(s)`);
 
-let watchTimer: ReturnType<typeof setTimeout> | null = null;
-fs.watchFile(CONFIG_PATH, { interval: 1000 }, () => {
-  if (watchTimer) clearTimeout(watchTimer);
-  watchTimer = setTimeout(() => {
-    watchTimer = null;
+  let running = 0;
+  const runningTasks = new Set<string>();
+  let shuttingDown = false;
+
+  async function runTaskTracked(task: TaskConfig): Promise<void> {
+    if (shuttingDown || runningTasks.has(task.name)) return;
+    runningTasks.add(task.name);
+    running++;
     try {
-      const newAll = load();
-      const newTasks = newAll.filter((t) => t.enabled);
-      if (newTasks.length < newAll.length) {
-        const skipped = newAll
-          .filter((t) => !t.enabled)
-          .map((t) => t.name)
-          .join(', ');
-        console.log(`${dim('skipped disabled tasks:')} ${skipped}`);
-      }
-      console.log(`${yellow('config changed')}, ${bold(String(newTasks.length))} task(s) reloaded`);
-      handle.update(newTasks);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`${red('config reload error:')} ${msg}`);
+      await runTask(task);
+    } finally {
+      running--;
+      runningTasks.delete(task.name);
     }
-  }, 1000);
-});
-
-const SHUTDOWN_TIMEOUT = 30_000;
-
-function shutdown(signal: string) {
-  if (shuttingDown) return;
-  shuttingDown = true;
-  console.log(`\n${yellow('received ' + signal)}, shutting down...`);
-  handle.stop();
-
-  if (process.env.NODE_ENV === 'development') {
-    console.log('dev mode, exiting immediately');
-    process.exit(0);
   }
 
-  const forcedExit = setTimeout(() => {
-    console.log(`shutdown timeout, ${running} task(s) still running — force exit`);
-    process.exit(1);
-  }, SHUTDOWN_TIMEOUT);
+  const handle: SchedulerHandle = start(tasks, runTaskTracked);
 
-  const check = setInterval(() => {
-    if (running === 0) {
-      clearTimeout(forcedExit);
-      clearInterval(check);
-      console.log('all tasks finished, exiting');
+  let watchTimer: ReturnType<typeof setTimeout> | null = null;
+  fs.watchFile(CONFIG_PATH, { interval: 1000 }, () => {
+    if (watchTimer) clearTimeout(watchTimer);
+    watchTimer = setTimeout(() => {
+      watchTimer = null;
+      try {
+        const newTasks = loadEnabledTasks();
+        console.log(
+          `${yellow('config changed')}, ${bold(String(newTasks.length))} task(s) reloaded`,
+        );
+        handle.update(newTasks);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`${red('config reload error:')} ${msg}`);
+      }
+    }, 1000);
+  });
+
+  // Web server (opt-in via WEB_PORT env)
+  let webServer: Server | null = null;
+  const webPort = parseInt(process.env.WEB_PORT || '', 10);
+  if (webPort > 0) {
+    const { startServer } = await import('./server.js');
+    webServer = await startServer(webPort, CONFIG_PATH, handle);
+  }
+
+  const SHUTDOWN_TIMEOUT = 30_000;
+
+  function shutdown(signal: string) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`\n${yellow('received ' + signal)}, shutting down...`);
+    handle.stop();
+
+    fs.unwatchFile(CONFIG_PATH);
+    if (watchTimer) clearTimeout(watchTimer);
+
+    if (webServer) {
+      webServer.close();
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('dev mode, exiting immediately');
       process.exit(0);
     }
-  }, 200);
+
+    const forcedExit = setTimeout(() => {
+      console.log(`shutdown timeout, ${running} task(s) still running — force exit`);
+      process.exit(1);
+    }, SHUTDOWN_TIMEOUT);
+
+    const check = setInterval(() => {
+      if (running === 0) {
+        clearTimeout(forcedExit);
+        clearInterval(check);
+        console.log('all tasks finished, exiting');
+        process.exit(0);
+      }
+    }, 200);
+  }
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+main();
