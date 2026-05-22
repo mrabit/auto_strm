@@ -12,12 +12,26 @@ interface Props {
   task: RawTaskConfig;
   index: number;
   isNew?: boolean;
-  defaults?: { remote?: RemoteConfig; cron?: string; rateLimit?: RateLimitConfig; jellyfin?: JellyfinConfig };
+  defaults?: {
+    remote?: RemoteConfig;
+    cron?: string;
+    rateLimit?: RateLimitConfig;
+    jellyfin?: JellyfinConfig;
+  };
   onChange: (task: RawTaskConfig) => void;
   onDelete: () => void;
+  onToggleEnabled?: (index: number, enabled: boolean) => void;
 }
 
-export default function TaskItemEditor({ task, index, isNew, defaults, onChange, onDelete }: Props) {
+export default function TaskItemEditor({
+  task,
+  index,
+  isNew,
+  defaults,
+  onChange,
+  onDelete,
+  onToggleEnabled,
+}: Props) {
   const [syncing, setSyncing] = useState(false);
   const panelStyle: React.CSSProperties = { marginBottom: 8 };
 
@@ -64,8 +78,12 @@ export default function TaskItemEditor({ task, index, isNew, defaults, onChange,
             Enabled{' '}
             <Switch
               size="small"
+              disabled={isNew}
               checked={task.enabled !== false}
-              onChange={(v) => onChange({ ...task, enabled: v })}
+              onChange={(v) => {
+                onChange({ ...task, enabled: v });
+                onToggleEnabled?.(index, v);
+              }}
             />
           </span>
           <Popconfirm title="Delete this task?" onConfirm={onDelete}>
@@ -75,88 +93,91 @@ export default function TaskItemEditor({ task, index, isNew, defaults, onChange,
       }
       style={{ marginBottom: 12 }}
     >
-      <Collapse
-        size="small"
-        items={[
-          {
-            key: 'remote',
-            label: 'Remote',
-            style: panelStyle,
-            children: (
-              <RemoteFieldsEditor
-                value={task.remote}
-                defaults={defaults?.remote}
-                onChange={(v) => onChange({ ...task, remote: v })}
-              />
-            ),
-          },
-          {
-            key: 'local',
-            label: 'Local',
-            style: panelStyle,
-            children: (
-              <Space.Compact style={{ width: '100%' }}>
-                <Addon label="Path" />
-                <Input
-                  required
-                  placeholder="./data/task-name"
-                  value={task.local.path}
-                  onChange={(e) =>
+      {task.enabled !== false && (
+        <Collapse
+          size="small"
+          items={[
+            {
+              key: 'remote',
+              label: 'Remote',
+              style: panelStyle,
+              children: (
+                <RemoteFieldsEditor
+                  value={task.remote}
+                  defaults={defaults?.remote}
+                  onChange={(v) => onChange({ ...task, remote: v })}
+                />
+              ),
+            },
+            {
+              key: 'local',
+              label: 'Local',
+              style: panelStyle,
+              children: (
+                <Space.Compact style={{ width: '100%' }}>
+                  <Addon label="Path" />
+                  <Input
+                    required
+                    placeholder="./data/task-name"
+                    value={task.local.path}
+                    onChange={(e) =>
+                      onChange({
+                        ...task,
+                        local: { path: e.target.value },
+                      })
+                    }
+                  />
+                </Space.Compact>
+              ),
+            },
+            {
+              key: 'schedule',
+              label: 'Schedule',
+              style: panelStyle,
+              children: (
+                <>
+                  <Space.Compact style={{ width: '100%' }}>
+                    <Addon label="Cron" />
+                    <Input
+                      placeholder={defaults?.cron || ''}
+                      value={task.cron}
+                      onChange={(e) => onChange({ ...task, cron: e.target.value || undefined })}
+                    />
+                  </Space.Compact>
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ marginBottom: 4, color: '#888', fontSize: 12 }}>Rate Limit</div>
+                    <RateLimitFields
+                      value={task.rateLimit}
+                      inherited={defaults?.rateLimit}
+                      onChange={(v) => onChange({ ...task, rateLimit: v })}
+                    />
+                  </div>
+                </>
+              ),
+            },
+            {
+              key: 'jellyfin',
+              label: 'Jellyfin',
+              style: panelStyle,
+              children: (
+                <JellyfinFields
+                  value={task.jellyfin}
+                  inherited={defaults?.jellyfin}
+                  onChange={(v) =>
                     onChange({
                       ...task,
-                      local: { path: e.target.value },
+                      jellyfin:
+                        v.url || v.token || v.enabled !== undefined
+                          ? (v as JellyfinConfig)
+                          : undefined,
                     })
                   }
                 />
-              </Space.Compact>
-            ),
-          },
-          {
-            key: 'schedule',
-            label: 'Schedule',
-            style: panelStyle,
-            children: (
-              <>
-                <Space.Compact style={{ width: '100%' }}>
-                  <Addon label="Cron" />
-                  <Input
-                    placeholder={defaults?.cron || ''}
-                    value={task.cron}
-                    onChange={(e) => onChange({ ...task, cron: e.target.value || undefined })}
-                  />
-                </Space.Compact>
-                <div style={{ marginTop: 8 }}>
-                  <div style={{ marginBottom: 4, color: '#888', fontSize: 12 }}>
-                    Rate Limit
-                  </div>
-                  <RateLimitFields
-                    value={task.rateLimit}
-                    inherited={defaults?.rateLimit}
-                    onChange={(v) => onChange({ ...task, rateLimit: v })}
-                  />
-                </div>
-              </>
-            ),
-          },
-          {
-            key: 'jellyfin',
-            label: 'Jellyfin',
-            style: panelStyle,
-            children: (
-              <JellyfinFields
-                value={task.jellyfin}
-                inherited={defaults?.jellyfin}
-                onChange={(v) =>
-                  onChange({
-                    ...task,
-                    jellyfin: v.url || v.token || v.enabled !== undefined ? (v as JellyfinConfig) : undefined,
-                  })
-                }
-              />
-            ),
-          },
-        ]}
-      />
+              ),
+            },
+          ]}
+        />
+      )}
     </Card>
   );
 }

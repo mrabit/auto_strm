@@ -13,11 +13,17 @@ function emptyTask(): RawTaskConfig {
 
 interface Props {
   tasks: RawTaskConfig[];
-  defaults?: { remote?: RemoteConfig; cron?: string; rateLimit?: RateLimitConfig; jellyfin?: JellyfinConfig };
+  defaults?: {
+    remote?: RemoteConfig;
+    cron?: string;
+    rateLimit?: RateLimitConfig;
+    jellyfin?: JellyfinConfig;
+  };
   onChange: (tasks: RawTaskConfig[]) => void;
+  onToggleEnabled?: (index: number, enabled: boolean) => void;
 }
 
-export default function TaskListEditor({ tasks, defaults, onChange }: Props) {
+export default function TaskListEditor({ tasks, defaults, onChange, onToggleEnabled }: Props) {
   function updateTask(index: number, task: RawTaskConfig) {
     const next = [...tasks];
     next[index] = task;
@@ -43,6 +49,7 @@ export default function TaskListEditor({ tasks, defaults, onChange }: Props) {
           defaults={defaults}
           onChange={(t) => updateTask(i, t)}
           onDelete={() => removeTask(i)}
+          onToggleEnabled={onToggleEnabled}
         />
       ))}
       <Button

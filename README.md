@@ -105,15 +105,22 @@ Task 级别的 `jellyfin` 覆盖全局配置（整对象覆盖，非逐字段合
 
 ## Webhook
 
-接收外部系统的 webhook 事件，自动触发同步任务。
+接收外部系统的 webhook 事件，自动匹配任务并触发同步。
 
+**手动指定任务：**
 ```
 POST /api/webhook?task=任务名
-Body: {"type": "TransferFinished", "data": {...}}
 ```
+根据 URL 参数中的任务名直接触发同步。
 
-收到 webhook 后查找对应任务触发同步，HTTP 响应立即返回，任务在后台异步执行。
-同名任务正在运行时，新触发静默跳过。
+**MoviePilot 自动匹配：**
+```
+POST /api/webhook
+Body: {"type": "transfer.complete", "data": {...}}
+```
+自动提取 `transferinfo.target_diritem.path`，按 `remote.path` 前缀匹配已启用任务（最长路径优先），匹配成功后延迟 60 秒触发同步。
+
+收到 webhook 后 HTTP 响应立即返回，任务在后台异步执行。同名任务正在运行时，新触发静默跳过。未知格式仅记录日志。
 
 ## 环境变量
 

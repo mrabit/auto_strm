@@ -38,9 +38,15 @@
 
 ## Webhook
 
-接收外部系统（如 MoviePilot）的 webhook 事件，自动触发对应任务的同步。
-请求体格式：`{"type": "事件类型", "data": {...}}`。
-同名任务正在运行时重复触发静默跳过。
+接收外部系统（如 MoviePilot）的 webhook 事件，自动匹配并触发对应任务的同步。
+
+- `POST /api/webhook?task=name` — 手动指定任务名，直接触发同步
+- `POST /api/webhook` — 自动检测，解析 `type: "transfer.complete"` 事件：
+  - 提取 `data.transferinfo.target_diritem.path`（兜底 `target_item.path`）
+  - 按 `remote.path` 前缀匹配所有已启用 task，选最长路径匹配（如 `/电影/动漫` 优先于 `/电影`）
+  - 匹配成功后延迟 **60 秒** 触发同步，等待 WebDAV 文件落盘
+- 同名任务正在运行时重复触发静默跳过。
+- body 格式不匹配时仅记录日志，不触发同步。
 
 ## Jellyfin 集成
 

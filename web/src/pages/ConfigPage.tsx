@@ -58,6 +58,23 @@ export default function ConfigPage({ onDirtyChange, triggerSave, onSaveDone }: P
     }
   }, [triggerSave, onDirtyChange, onSaveDone]);
 
+  const toggleEnabled = useCallback(
+    async (index: number, enabled: boolean) => {
+      const cfg = configRef.current;
+      if (!cfg) return;
+      const tasks = cfg.tasks.map((t, i) => (i === index ? { ...t, enabled } : t));
+      const next = { ...cfg, tasks };
+      setConfig(next);
+      try {
+        await saveConfig(next);
+        onDirtyChange?.(false);
+      } catch (err) {
+        message.error('Failed to save: ' + (err instanceof Error ? err.message : String(err)));
+      }
+    },
+    [onDirtyChange],
+  );
+
   function update(changes: Partial<ConfigFile>) {
     if (!config) return;
     const next = { ...config, ...changes };
@@ -82,8 +99,14 @@ export default function ConfigPage({ onDirtyChange, triggerSave, onSaveDone }: P
       <h3 style={{ marginBottom: 16 }}>Tasks</h3>
       <TaskListEditor
         tasks={config.tasks}
-        defaults={{ remote: config.remote, cron: config.cron, rateLimit: config.rateLimit, jellyfin: config.jellyfin }}
+        defaults={{
+          remote: config.remote,
+          cron: config.cron,
+          rateLimit: config.rateLimit,
+          jellyfin: config.jellyfin,
+        }}
         onChange={(tasks) => update({ tasks })}
+        onToggleEnabled={toggleEnabled}
       />
     </div>
   );

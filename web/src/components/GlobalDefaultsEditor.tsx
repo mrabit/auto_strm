@@ -10,21 +10,28 @@ interface Props {
   cron?: string;
   rateLimit?: ConfigFile['rateLimit'];
   jellyfin?: ConfigFile['jellyfin'];
-  onChange: (patch: { remote?: ConfigFile['remote']; cron?: string; rateLimit?: ConfigFile['rateLimit']; jellyfin?: ConfigFile['jellyfin'] }) => void;
+  onChange: (patch: {
+    remote?: ConfigFile['remote'];
+    cron?: string;
+    rateLimit?: ConfigFile['rateLimit'];
+    jellyfin?: ConfigFile['jellyfin'];
+  }) => void;
 }
 
-export default function GlobalDefaultsEditor({ value, cron, rateLimit, jellyfin, onChange }: Props) {
+export default function GlobalDefaultsEditor({
+  value,
+  cron,
+  rateLimit,
+  jellyfin,
+  onChange,
+}: Props) {
   const items = [
     {
       key: 'defaults',
       label: 'Global Defaults',
       children: (
         <>
-          <RemoteFieldsEditor
-            value={value}
-            onChange={(v) => onChange({ remote: v })}
-            hidePath
-          />
+          <RemoteFieldsEditor value={value} onChange={(v) => onChange({ remote: v })} hidePath />
           <Space.Compact style={{ width: '100%', marginTop: 8 }}>
             <Addon label="Cron" />
             <Input
@@ -35,10 +42,7 @@ export default function GlobalDefaultsEditor({ value, cron, rateLimit, jellyfin,
           </Space.Compact>
           <div style={{ marginTop: 8 }}>
             <div style={{ marginBottom: 4, color: '#888', fontSize: 12 }}>Rate Limit</div>
-            <RateLimitFields
-              value={rateLimit}
-              onChange={(v) => onChange({ rateLimit: v })}
-            />
+            <RateLimitFields value={rateLimit} onChange={(v) => onChange({ rateLimit: v })} />
           </div>
           <div style={{ marginTop: 8 }}>
             <div style={{ marginBottom: 4, color: '#888', fontSize: 12 }}>Jellyfin</div>
@@ -46,7 +50,10 @@ export default function GlobalDefaultsEditor({ value, cron, rateLimit, jellyfin,
               value={jellyfin}
               onChange={(v) =>
                 onChange({
-                  jellyfin: v.url || v.token || v.enabled !== undefined ? (v as ConfigFile['jellyfin']) : undefined,
+                  jellyfin:
+                    v.url || v.token || v.enabled !== undefined
+                      ? (v as ConfigFile['jellyfin'])
+                      : undefined,
                 })
               }
             />
@@ -56,5 +63,5 @@ export default function GlobalDefaultsEditor({ value, cron, rateLimit, jellyfin,
     },
   ];
 
-  return <Collapse items={items} defaultActiveKey={['defaults']} style={{ marginBottom: 16 }} />;
+  return <Collapse items={items} style={{ marginBottom: 16 }} />;
 }

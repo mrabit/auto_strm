@@ -187,6 +187,7 @@ Metadata downloads and strm generation run concurrently within each task. Contro
 
 - **Web server (opt-in)**: set `WEB_PORT` env var to enable the web UI. Express serves the React SPA on `/` and REST API on `/api/*`. When `WEB_PORT` is unset, the app runs headless as before.
 - **Config management API**: `GET /api/config` returns the raw config JSON. `PUT /api/config` validates the body, writes atomically (tmp + rename), and triggers scheduler reload. Passwords are returned in plain text — the frontend `Input.Password` component handles visual masking.
+- **Task enable toggle instant save**: switching a task's enabled/disabled state via the web UI immediately calls `PUT /api/config`, no save button required. New (unsaved) tasks have the toggle disabled until first save.
 - **Config hot-reload**: `fs.watchFile` monitors the config file. On change, config is reloaded, cron jobs are rebuilt. Existing tasks only get updated cron schedules (no immediate re-run); genuinely new tasks fire immediately. Parse errors leave old jobs running untouched.
 - **Incremental sync**: metadata files are skipped if the local file already exists (existence-only check, no size/mtime comparison). `.strm` files are skipped if content matches.
 - **Error cleanup**: partial downloads are deleted on failure so the next run retries cleanly.
@@ -206,15 +207,17 @@ Express routes:
 
 ## Webhook
 
-`POST /api/webhook` receives webhook events (e.g. from MoviePilot). Body format: `{"type": "TransferFinished", "data": {...}}`.
+`POST /api/webhook` 接收外部 webhook 事件，自动匹配任务并延迟触发同步。
+
+**MoviePilot 适配：** 解析 `type: "transfer.complete"` 事件，提取 `data.transferinfo.target_diritem.path`（兜底 `target_item.path`），按 `remote.path` 前缀匹配所有已启用 task，选最长匹配（如 `/电影/动漫` 优先于 `/电影`），匹配成功后延迟 60 秒触发 `runTask()`。
+
+**手动触发：** `POST /api/webhook?task=name` 直接按任务名触发。
 
 **Flow:**
-1. Prints `[webhook] received` log
-2. If `?task=name` query param set → calls `schedulerHandle.runNow(name)`
-3. `runNow` looks up the task and fires `runTask(task)` asynchronously
-4. `runTask` → `createClient` → `scan()` → `syncMetadata()` → `generateStrm()` → (if strmGenerated > 0 && task.jellyfin) → `refreshLibrary()`
-5. HTTP response returns immediately — task runs in background
-6. Re-entrance guard: if the same task is already running, the new trigger is silently skipped
+1. 如果 `?task=name` 指定 → `schedulerHandle.runNow(name)` 直接触发
+2. 如果 body 包含 `type: "transfer.complete"` → 提取 target path，遍历 enabled tasks，选最长 `remote.path` 前缀匹配，`setTimeout(fn, 60_000)` 延迟触发
+3. 格式不匹配 → 截取前 300 字符日志，返回 `{ action: 'logged' }`
+4. Re-entrance guard: 同名任务正在运行时重复触发静默跳过
 
 ## Jellyfin integration
 

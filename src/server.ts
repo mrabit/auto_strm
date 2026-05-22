@@ -89,12 +89,7 @@ export function startServer(
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
       return res.status(400).json({ error: 'Request body must be a JSON object' });
     }
-    const { type, data } = req.body;
     const taskName = (req.query.task as string) || undefined;
-
-    console.log(
-      `[webhook] received event type="${type || 'unknown'}" task="${taskName || '(none)'}"`,
-    );
 
     if (taskName) {
       if (schedulerHandle.runNow(taskName)) {
@@ -105,10 +100,41 @@ export function startServer(
       return res.status(404).json({ error: `Task "${taskName}" not found` });
     }
 
-    // Log the event data for informational purposes
-    if (data) {
-      console.log(`[webhook] data:`, JSON.stringify(data).slice(0, 500));
+    // Auto-detect: try to match against tasks
+    const { data, type } = req.body;
+
+    // MoviePilot transfer.complete: match target dir path against task remote.path
+    if (typeof type === 'string' && type === 'transfer.complete') {
+      const targetPath: string | undefined =
+        data?.transferinfo?.target_diritem?.path || data?.transferinfo?.target_item?.path;
+
+      if (targetPath) {
+        let bestMatch: { task: TaskConfig; len: number } | null = null;
+        for (const task of allTasks) {
+          if (!task.enabled) continue;
+          if (
+            targetPath.startsWith(task.remote.path) &&
+            task.remote.path.length > (bestMatch?.len ?? -1)
+          ) {
+            bestMatch = { task, len: task.remote.path.length };
+          }
+        }
+        if (bestMatch) {
+          setTimeout(() => {
+            schedulerHandle.runNow(bestMatch!.task.name);
+          }, 60_000);
+          console.log(
+            `[webhook] MoviePilot path "${targetPath}" → task "${bestMatch.task.name}" (delayed 60s)`,
+          );
+          return res.json({ success: true, action: 'sync_triggered', task: bestMatch.task.name });
+        }
+      }
+      console.log(`[webhook] MoviePilot no matching task for path: ${targetPath || '(none)'}`);
+      return res.json({ success: true, action: 'no_match' });
     }
+
+    // Unknown format
+    console.log(`[webhook] unknown event type: ${JSON.stringify(req.body).slice(0, 300)}`);
     res.json({ success: true, action: 'logged' });
   });
 
