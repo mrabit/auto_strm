@@ -12,7 +12,7 @@ export function startServer(
   port: number,
   configPath: string,
   schedulerHandle: SchedulerHandle,
-  runTask: (task: TaskConfig) => Promise<void>,
+  runTask: (task: TaskConfig, overrideRemotePath?: string) => Promise<void>,
   initialTasks: TaskConfig[],
 ): Promise<{ server: Server; updateTasks: (tasks: TaskConfig[]) => void }> {
   let allTasks = initialTasks;
@@ -121,12 +121,17 @@ export function startServer(
         }
         if (bestMatch) {
           setTimeout(() => {
-            schedulerHandle.runNow(bestMatch!.task.name);
+            schedulerHandle.runNow(bestMatch!.task.name, targetPath);
           }, 60_000);
           console.log(
             `[webhook] MoviePilot path "${targetPath}" → task "${bestMatch.task.name}" (delayed 60s)`,
           );
-          return res.json({ success: true, action: 'sync_triggered', task: bestMatch.task.name });
+          return res.json({
+            success: true,
+            action: 'sync_triggered',
+            task: bestMatch.task.name,
+            path: targetPath,
+          });
         }
       }
       console.log(`[webhook] MoviePilot no matching task for path: ${targetPath || '(none)'}`);

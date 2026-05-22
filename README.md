@@ -118,7 +118,7 @@ POST /api/webhook?task=任务名
 POST /api/webhook
 Body: {"type": "transfer.complete", "data": {...}}
 ```
-自动提取 `transferinfo.target_diritem.path`，按 `remote.path` 前缀匹配已启用任务（最长路径优先），匹配成功后延迟 60 秒触发同步。
+自动提取 `transferinfo.target_diritem.path`，按 `remote.path` 前缀匹配已启用任务（最长路径优先），匹配成功后延迟 60 秒**仅同步该目录**（非整个 task）。
 
 收到 webhook 后 HTTP 响应立即返回，任务在后台异步执行。同名任务正在运行时，新触发静默跳过。未知格式仅记录日志。
 

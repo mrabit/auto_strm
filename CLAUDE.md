@@ -181,7 +181,7 @@ Metadata downloads and strm generation run concurrently within each task. Contro
 - `TaskConfig` / `RemoteConfig` / `ResolvedRemoteConfig` / `LocalConfig` — defined in `config.ts`
 - `ConfigFile` / `RawTaskConfig` — raw (pre-merge) config types, exported for server and frontend use
 - `MetadataFile` / `VideoFile` / `ScanResult` — defined in `scanner.ts`
-- `SchedulerHandle` — `{ stop: () => void; update: (tasks: TaskConfig[]) => void }`, returned by `scheduler.start()`
+- `SchedulerHandle` — `{ stop: () => void; update: (tasks: TaskConfig[]) => void; runNow: (name: string, overrideRemotePath?: string) => boolean }`, returned by `scheduler.start()`
 
 ## Key behaviors
 
@@ -209,13 +209,13 @@ Express routes:
 
 `POST /api/webhook` 接收外部 webhook 事件，自动匹配任务并延迟触发同步。
 
-**MoviePilot 适配：** 解析 `type: "transfer.complete"` 事件，提取 `data.transferinfo.target_diritem.path`（兜底 `target_item.path`），按 `remote.path` 前缀匹配所有已启用 task，选最长匹配（如 `/电影/动漫` 优先于 `/电影`），匹配成功后延迟 60 秒触发 `runTask()`。
+**MoviePilot 适配：** 解析 `type: "transfer.complete"` 事件，提取 `data.transferinfo.target_diritem.path`（兜底 `target_item.path`），按 `remote.path` 前缀匹配所有已启用 task，选最长匹配（如 `/电影/动漫` 优先于 `/电影`），匹配成功后延迟 60 秒触发 **部分同步**（仅扫描 webhook 传来的目标目录，非整个 task）。`relativePath` 自动补全子目录偏移量，保证本地落点和 strm URL 与全量同步一致。
 
-**手动触发：** `POST /api/webhook?task=name` 直接按任务名触发。
+**手动触发：** `POST /api/webhook?task=name` 直接按任务名触发全量同步。
 
 **Flow:**
-1. 如果 `?task=name` 指定 → `schedulerHandle.runNow(name)` 直接触发
-2. 如果 body 包含 `type: "transfer.complete"` → 提取 target path，遍历 enabled tasks，选最长 `remote.path` 前缀匹配，`setTimeout(fn, 60_000)` 延迟触发
+1. 如果 `?task=name` 指定 → `schedulerHandle.runNow(name)` 直接触发全量同步
+2. 如果 body 包含 `type: "transfer.complete"` → 提取 target path，遍历 enabled tasks，选最长 `remote.path` 前缀匹配，`setTimeout(() => schedulerHandle.runNow(name, targetPath), 60_000)` 延迟触发部分同步
 3. 格式不匹配 → 截取前 300 字符日志，返回 `{ action: 'logged' }`
 4. Re-entrance guard: 同名任务正在运行时重复触发静默跳过
 

@@ -47,10 +47,14 @@ function formatTime(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-async function runTask(task: TaskConfig): Promise<void> {
+async function runTask(task: TaskConfig, overrideRemotePath?: string): Promise<void> {
   const startedAt = Date.now();
   const logPrefix = cyan(`[${task.name}]`);
-  console.log(`${logPrefix} ${dim('syncing...')}`);
+  const scanPath = overrideRemotePath || task.remote.path;
+  const isPartial = !!overrideRemotePath;
+  console.log(
+    `${logPrefix} ${dim('syncing...')}${isPartial ? ' ' + dim(`(partial: ${scanPath})`) : ''}`,
+  );
 
   try {
     const client = createClient(task.remote.url, {
@@ -58,14 +62,22 @@ async function runTask(task: TaskConfig): Promise<void> {
       password: task.remote.password,
     });
 
-    const { metadataFiles, videoFiles } = await scan(
-      client,
-      task.remote.path,
-      task.rateLimit.intervalMs,
-    );
+    const { metadataFiles, videoFiles } = await scan(client, scanPath, task.rateLimit.intervalMs);
+
+    let pathPrefix = '';
+    if (isPartial) {
+      const offset = overrideRemotePath!.slice(task.remote.path.length).replace(/^\//, '');
+      if (offset) pathPrefix = offset + '/';
+    }
+    const allMetadata = isPartial
+      ? metadataFiles.map((f) => ({ ...f, relativePath: pathPrefix + f.relativePath }))
+      : metadataFiles;
+    const allVideos = isPartial
+      ? videoFiles.map((f) => ({ ...f, relativePath: pathPrefix + f.relativePath }))
+      : videoFiles;
 
     console.log(
-      `${logPrefix} found ${bold(String(metadataFiles.length))} metadata files, ${bold(String(videoFiles.length))} videos`,
+      `${logPrefix} found ${bold(String(allMetadata.length))} metadata files, ${bold(String(allVideos.length))} videos`,
     );
 
     let metaDownloaded = 0;
@@ -73,7 +85,7 @@ async function runTask(task: TaskConfig): Promise<void> {
 
     if (task.remote.syncMetadata) {
       const results = await runWithLimit(
-        metadataFiles,
+        allMetadata,
         (file) => syncMetadata(client, file, task.local.path),
         task.rateLimit.concurrency,
         task.rateLimit.intervalMs,
@@ -83,7 +95,7 @@ async function runTask(task: TaskConfig): Promise<void> {
     }
 
     const strmResults = await runWithLimit(
-      videoFiles,
+      allVideos,
       (file) => generateStrm(file, task.remote, task.local.path),
       task.rateLimit.concurrency,
       task.rateLimit.intervalMs,
@@ -145,12 +157,12 @@ async function main() {
   const runningTasks = new Set<string>();
   let shuttingDown = false;
 
-  async function runTaskTracked(task: TaskConfig): Promise<void> {
+  async function runTaskTracked(task: TaskConfig, overrideRemotePath?: string): Promise<void> {
     if (shuttingDown || runningTasks.has(task.name)) return;
     runningTasks.add(task.name);
     running++;
     try {
-      await runTask(task);
+      await runTask(task, overrideRemotePath);
     } finally {
       running--;
       runningTasks.delete(task.name);

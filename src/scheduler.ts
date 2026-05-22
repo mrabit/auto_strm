@@ -4,12 +4,12 @@ import type { TaskConfig } from './config';
 export interface SchedulerHandle {
   stop: () => void;
   update: (tasks: TaskConfig[]) => void;
-  runNow: (name: string) => boolean;
+  runNow: (name: string, overrideRemotePath?: string) => boolean;
 }
 
 export function start(
   tasks: TaskConfig[],
-  runTask: (task: TaskConfig) => Promise<void>,
+  runTask: (task: TaskConfig, overrideRemotePath?: string) => Promise<void>,
 ): SchedulerHandle {
   let jobs: { job: CronJob; name: string }[] = [];
   let knownNames = new Set<string>();
@@ -39,10 +39,10 @@ export function start(
   return {
     stop: () => jobs.forEach(({ job }) => job.stop()),
     update: (newTasks: TaskConfig[]) => applyJobs(newTasks, false),
-    runNow: (name: string) => {
+    runNow: (name: string, overrideRemotePath?: string) => {
       const task = currentTasks.find((t) => t.name === name);
       if (task) {
-        runTask(task);
+        runTask(task, overrideRemotePath);
         return true;
       }
       return false;
