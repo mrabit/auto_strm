@@ -55,7 +55,8 @@ WEB_PORT=8080 docker compose up --build
 │   ├── syncer.ts          # Downloads metadata, generates .strm files (buildStrmUrl)
 │   ├── scheduler.ts       # Cron scheduling, fires immediately then on schedule, returns stop handle
 │   ├── jellyfin.ts        # Jellyfin API client: refreshLibrary() calls POST /Library/Refresh
-│   └── logger.ts          # Ring-buffer console capture for log viewer
+│   ├── logger.ts          # Ring-buffer console capture for log viewer, exports restoreConsole()
+│   └── utils.ts           # Shared: delay(), pad(), errorMessage()
 ├── web/
 │   ├── src/
 │   │   ├── main.tsx       # React entry point
@@ -71,7 +72,9 @@ WEB_PORT=8080 docker compose up --build
 │   │       ├── RemoteFieldsEditor.tsx    # Reusable remote config form fields
 │   │       ├── RateLimitFields.tsx       # Concurrency/interval input fields
 │   │       ├── JellyfinFields.tsx        # Reusable Jellyfin url/token input fields
-│   │       └── Addon.tsx                 # Compact input label prefix
+│   │       ├── Addon.tsx                 # Compact input label prefix
+│   │       ├── cleanJellyfin.ts          # Shared Jellyfin field cleanup (return undefined if empty)
+│   │       └── ErrorBoundary.tsx         # Global error boundary, wraps <App />
 │   ├── package.json
 │   ├── vite.config.ts
 │   └── dist/               # Built frontend (served by Express in production)
@@ -187,11 +190,15 @@ Metadata downloads and strm generation run concurrently within each task. Contro
 
 - **Web server (opt-in)**: set `WEB_PORT` env var to enable the web UI. Express serves the React SPA on `/` and REST API on `/api/*`. When `WEB_PORT` is unset, the app runs headless as before.
 - **Config management API**: `GET /api/config` returns the raw config JSON. `PUT /api/config` validates the body, writes atomically (tmp + rename), and triggers scheduler reload. Passwords are returned in plain text — the frontend `Input.Password` component handles visual masking.
-- **Task enable toggle instant save**: switching a task's enabled/disabled state via the web UI immediately calls `PUT /api/config`, no save button required. New (unsaved) tasks have the toggle disabled until first save.
+- **Task enable toggle instant save**: switching a task's enabled/disabled state immediately saves only the `enabled` field (uses `savedConfigRef` to isolate from other unsaved edits). New tasks use `__tmp__:N` prefix for unique React keys, replaced with real UUID on first save.
+- **Save button loading**: App tracks `saving` state; `onSaveDone` is called in `finally` block so the button recovers even if save/load fails.
 - **Config hot-reload**: `fs.watchFile` monitors the config file. On change, config is reloaded, cron jobs are rebuilt. Existing tasks only get updated cron schedules (no immediate re-run); genuinely new tasks fire immediately. Parse errors leave old jobs running untouched.
 - **Incremental sync**: metadata files are skipped if the local file already exists (existence-only check, no size/mtime comparison). `.strm` files are skipped if content matches.
 - **Error cleanup**: partial downloads are deleted on failure so the next run retries cleanly.
-- **Graceful shutdown**: on SIGTERM/SIGINT, the HTTP server is closed (if running), cron jobs are stopped, and in-flight tasks allowed to finish before exit (30s timeout, then force exit).
+- **Graceful shutdown**: on SIGTERM/SIGINT, HTTP server stops accepting connections, active connections destroyed, webhook timers cancelled, cron jobs stopped, in-flight tasks allowed to finish (30s timeout, then force exit).
+- **Scanner traversal**: same-level directories are traversed concurrently via `Promise.all`.
+- **Logger**: uses `splice()` for O(1) bulk eviction instead of `shift()` O(n).
+- **Stream downloads**: `pipeToFile` uses `stream/promises.pipeline()` for automatic error propagation and cleanup.
 - **Re-entrance guard**: if a cron trigger fires while the previous run of the same task is still in progress, the new trigger is skipped.
 
 ## API endpoints
@@ -238,6 +245,7 @@ When adding a new config field (e.g. `jellyfin`), update ALL of:
 - `npm run check` — backend only: lint + tsc
 - `npm run build:web` — frontend type-check + vite build (run separately)
 - Run both before committing frontend changes
+- Fix prettier errors: `npx prettier --write <file>`
 
 ## Prettier
 
@@ -250,7 +258,7 @@ npx prettier --write src/config.ts src/jellyfin.ts  # auto-fix formatting
 - `webdav` (v5) — WebDAV client: `createClient`, `getDirectoryContents`, `createReadStream`
 - `cron` (v3) — `CronJob` for scheduling
 - `express` (v5) — HTTP server for web UI and REST API
-- `react` + `antd` (v5) — web UI (in `app/web/`)
+- `react` + `antd` (v5) — web UI (in `web/`)
 - `vite` (v5) — frontend build tool
 - `tsx` — TypeScript runner for dev mode
 
@@ -259,3 +267,9 @@ npx prettier --write src/config.ts src/jellyfin.ts  # auto-fix formatting
 Metadata extensions synced as-is: `.nfo .jpg .jpeg .png .svg .ass .ssa .srt .sup .mp3 .flac .wav .aac`
 
 Video extensions trigger `.strm` generation: `.mkv .iso .ts .mp4 .avi .rmvb .wmv .m2ts .mpg .flv .rm .mov`
+
+## Gotchas
+
+- **Socket type**: import from `node:net`, not `node:http`
+- **Dockerfile non-root**: don't add non-root USER if config dir is volume-mounted (EACCES on write)
+- **Collapse antd v5**: children mode (`<Collapse.Panel>`) preserves expand/collapse state across re-renders

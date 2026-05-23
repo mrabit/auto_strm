@@ -8,4 +8,8 @@ config/default.json
 config/dev.json
 web/dist/
 web/node_modules/
+web/tsconfig.tsbuildinfo
 data
+.DS_Store
+.vscode/
+.idea/

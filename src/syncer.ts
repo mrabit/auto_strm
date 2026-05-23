@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { pipeline } from 'node:stream/promises';
 import path from 'node:path';
 import type { WebDAVClient } from 'webdav';
 import type { ResolvedRemoteConfig } from './config';
@@ -75,28 +76,18 @@ function buildStrmUrl(relativePath: string, remoteConfig: ResolvedRemoteConfig):
   );
 }
 
-function pipeToFile(readable: NodeJS.ReadableStream, dest: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const writable = fs.createWriteStream(dest);
-    const cleanup = () => {
-      try {
-        fs.unlinkSync(dest);
-      } catch {
-        /* best effort */
-      }
-    };
-    readable.pipe(writable);
-    writable.on('finish', resolve);
-    writable.on('error', (err) => {
-      cleanup();
-      reject(err);
-    });
-    readable.on('error', (err) => {
-      writable.destroy();
-      cleanup();
-      reject(err);
-    });
-  });
+async function pipeToFile(readable: NodeJS.ReadableStream, dest: string): Promise<void> {
+  const writable = fs.createWriteStream(dest);
+  try {
+    await pipeline(readable, writable);
+  } catch (err) {
+    try {
+      fs.unlinkSync(dest);
+    } catch {
+      /* best effort */
+    }
+    throw err;
+  }
 }
 
 function shouldDownload(dest: string): boolean {

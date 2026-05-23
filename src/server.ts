@@ -1,12 +1,15 @@
 import fsp from 'node:fs/promises';
+import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import express from 'express';
 import type { Server } from 'node:http';
+import type { Socket } from 'node:net';
 import { load, validateConfig } from './config';
 import type { ConfigFile, TaskConfig } from './config';
 import type { SchedulerHandle } from './scheduler';
 import { getLogs } from './logger';
+import { errorMessage } from './utils';
 
 export function startServer(
   port: number,
@@ -14,8 +17,18 @@ export function startServer(
   schedulerHandle: SchedulerHandle,
   runTask: (task: TaskConfig, overrideRemotePath?: string) => Promise<void>,
   initialTasks: TaskConfig[],
-): Promise<{ server: Server; updateTasks: (tasks: TaskConfig[]) => void }> {
+): Promise<{ server: Server; updateTasks: (tasks: TaskConfig[]) => void; close: () => void }> {
   let allTasks = initialTasks;
+  const webhookTimers: ReturnType<typeof setTimeout>[] = [];
+
+  // Clean up stale .tmp files
+  const tmpPath = configPath + '.tmp';
+  try {
+    fs.unlinkSync(tmpPath);
+    console.log(`cleaned up stale ${tmpPath}`);
+  } catch {
+    /* no tmp file, fine */
+  }
 
   const app = express();
   app.use(express.json({ limit: '1mb' }));
@@ -31,7 +44,7 @@ export function startServer(
       }
       res.json(cfg);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = errorMessage(err);
       res.status(500).json({ error: msg });
     }
   });
@@ -50,7 +63,7 @@ export function startServer(
 
       res.json({ success: true });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = errorMessage(err);
       res.status(422).json({ error: msg });
     }
   });
@@ -62,10 +75,12 @@ export function startServer(
       if (!task) {
         return res.status(404).json({ error: `Task "${key}" not found` });
       }
-      runTask(task);
+      runTask(task).catch((err) =>
+        console.error(`[server] sync task "${key}" failed:`, errorMessage(err)),
+      );
       res.json({ success: true });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = errorMessage(err);
       res.status(500).json({ error: msg });
     }
   });
@@ -76,7 +91,7 @@ export function startServer(
       schedulerHandle.update(allTasks.filter((t) => t.enabled));
       res.json({ success: true });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = errorMessage(err);
       res.status(500).json({ error: msg });
     }
   });
@@ -120,9 +135,11 @@ export function startServer(
           }
         }
         if (bestMatch) {
-          setTimeout(() => {
+          const timer = setTimeout(() => {
+            webhookTimers.splice(webhookTimers.indexOf(timer), 1);
             schedulerHandle.runNow(bestMatch!.task.name, targetPath);
           }, 60_000);
+          webhookTimers.push(timer);
           console.log(
             `[webhook] MoviePilot path "${targetPath}" → task "${bestMatch.task.name}" (delayed 60s)`,
           );
@@ -156,11 +173,27 @@ export function startServer(
 
   return new Promise((resolve) => {
     const server = app.listen(port, () => {
+      // Track active connections for graceful shutdown
+      const connections = new Set<Socket>();
+      server.on('connection', (conn) => {
+        connections.add(conn);
+        conn.on('close', () => connections.delete(conn));
+      });
+
       console.log(`web server listening on http://localhost:${port}`);
       resolve({
         server,
         updateTasks: (tasks: TaskConfig[]) => {
           allTasks = tasks;
+        },
+        close: () => {
+          // Cancel pending webhook timers
+          for (const timer of webhookTimers) clearTimeout(timer);
+          webhookTimers.length = 0;
+          // Stop accepting new connections
+          server.close();
+          // Destroy existing connections
+          for (const conn of connections) conn.destroy();
         },
       });
     });

@@ -1,0 +1,14 @@
+node_modules
+web/node_modules
+dist
+web/dist
+data
+.git
+.claude
+CLAUDE.md
+README.md
+.gitignore
+.env
+.env.*
+.prettierrc
+eslint.config.mjs

@@ -1,6 +1,5 @@
 import './logger'; // must be first to capture all console output
 import fs from 'node:fs';
-import type { Server } from 'node:http';
 import { createClient } from 'webdav';
 import { load, CONFIG_PATH } from './config';
 import { scan } from './scanner';
@@ -8,10 +7,7 @@ import { syncMetadata, generateStrm } from './syncer';
 import { start } from './scheduler';
 import type { SchedulerHandle } from './scheduler';
 import type { TaskConfig } from './config';
-
-function delay(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
+import { delay, pad, errorMessage } from './utils';
 
 const C = {
   reset: '\x1b[0m',
@@ -43,7 +39,6 @@ function red(s: string) {
 }
 
 function formatTime(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
@@ -114,7 +109,7 @@ async function runTask(task: TaskConfig, overrideRemotePath?: string): Promise<v
       `${logPrefix} ${green('done')} ${dim(endedAt)} ${bold(`(${elapsed}s)`)} — metadata: ${green(String(metaDownloaded))} downloaded, ${yellow(String(metaSkipped))} skipped | strm: ${green(String(strmGenerated))} generated, ${yellow(String(strmSkipped))} skipped`,
     );
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = errorMessage(err);
     console.error(`${logPrefix} ${red('error')}:`, msg);
   }
 }
@@ -185,20 +180,19 @@ async function main() {
         handle.update(newEnabled);
         if (updateServerTasks) updateServerTasks(newAll);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(`${red('config reload error:')} ${msg}`);
+        console.error(`${red('config reload error:')} ${errorMessage(err)}`);
       }
     }, 1000);
   });
 
   // Web server (opt-in via WEB_PORT env)
-  let webServer: Server | null = null;
+  let serverClose: (() => void) | null = null;
   let updateServerTasks: ((tasks: TaskConfig[]) => void) | null = null;
   const webPort = parseInt(process.env.WEB_PORT || '', 10);
   if (webPort > 0) {
     const { startServer } = await import('./server.js');
     const result = await startServer(webPort, CONFIG_PATH, handle, runTaskTracked, allTasks);
-    webServer = result.server;
+    serverClose = result.close;
     updateServerTasks = result.updateTasks;
   }
 
@@ -213,13 +207,14 @@ async function main() {
     fs.unwatchFile(CONFIG_PATH);
     if (watchTimer) clearTimeout(watchTimer);
 
-    if (webServer) {
-      webServer.close();
+    if (serverClose) {
+      serverClose();
     }
 
     if (process.env.NODE_ENV === 'development') {
       console.log('dev mode, exiting immediately');
-      process.exit(0);
+      setTimeout(() => process.exit(0), 100);
+      return;
     }
 
     const forcedExit = setTimeout(() => {

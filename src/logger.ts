@@ -1,3 +1,5 @@
+import { pad } from './utils';
+
 export interface LogEntry {
   timestamp: string;
   level: 'info' | 'warn' | 'error';
@@ -6,10 +8,6 @@ export interface LogEntry {
 
 const MAX_ENTRIES = 1000;
 const buffer: LogEntry[] = [];
-
-function pad(n: number) {
-  return String(n).padStart(2, '0');
-}
 
 function fmtTime(d: Date): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
@@ -27,7 +25,7 @@ function push(level: LogEntry['level'], args: unknown[]): void {
     })
     .join(' ');
   buffer.push({ timestamp: fmtTime(new Date()), level, message });
-  if (buffer.length > MAX_ENTRIES) buffer.shift();
+  if (buffer.length > MAX_ENTRIES) buffer.splice(0, buffer.length - MAX_ENTRIES);
 }
 
 const orig = {
@@ -53,4 +51,10 @@ console.error = (...args: unknown[]) => {
 
 export function getLogs(): LogEntry[] {
   return [...buffer];
+}
+
+export function restoreConsole(): void {
+  console.log = orig.log;
+  console.warn = orig.warn;
+  console.error = orig.error;
 }

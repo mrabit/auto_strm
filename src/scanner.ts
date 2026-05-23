@@ -1,4 +1,5 @@
 import type { WebDAVClient } from 'webdav';
+import { delay } from './utils';
 
 export interface MetadataFile {
   remotePath: string;
@@ -68,19 +69,20 @@ export async function scan(
     const items = (await client.getDirectoryContents(dirPath)) as DirectoryItem[];
     if (intervalMs > 0) await delay(intervalMs);
 
+    const subDirs: { path: string; rel: string }[] = [];
+
     for (const item of items) {
       if (item.type === 'directory') {
-        await walk(item.filename, relDir + item.basename + '/');
+        subDirs.push({ path: item.filename, rel: relDir + item.basename + '/' });
       } else if (item.type === 'file') {
         const ext = item.ext || pathExtname(item.basename);
-        const lower = ext.toLowerCase();
 
-        if (videoExts.has(lower)) {
+        if (videoExts.has(ext)) {
           videoFiles.push({
             remotePath: item.filename,
             relativePath: relDir + item.basename,
           });
-        } else if (metaExts.has(lower)) {
+        } else if (metaExts.has(ext)) {
           metadataFiles.push({
             remotePath: item.filename,
             relativePath: relDir + item.basename,
@@ -88,6 +90,9 @@ export async function scan(
         }
       }
     }
+
+    // Traverse same-level directories concurrently
+    await Promise.all(subDirs.map((d) => walk(d.path, d.rel)));
   }
 
   await walk(remotePath, '');
@@ -97,8 +102,4 @@ export async function scan(
 function pathExtname(filename: string): string {
   const i = filename.lastIndexOf('.');
   return i > 0 ? filename.slice(i).toLowerCase() : '';
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
 }

@@ -15,11 +15,8 @@ export default function ConfigPage({ onDirtyChange, triggerSave, onSaveDone }: P
   const [config, setConfig] = useState<ConfigFile | null>(null);
   const [loading, setLoading] = useState(true);
   const configRef = useRef(config);
+  const savedConfigRef = useRef<ConfigFile | null>(null);
   const savingRef = useRef(false);
-
-  useEffect(() => {
-    configRef.current = config;
-  }, [config]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -27,6 +24,7 @@ export default function ConfigPage({ onDirtyChange, triggerSave, onSaveDone }: P
       const cfg = await fetchConfig();
       setConfig(cfg);
       configRef.current = cfg;
+      savedConfigRef.current = cfg;
       onDirtyChange?.(false);
     } catch (err) {
       message.error('Failed to load config: ' + (err instanceof Error ? err.message : String(err)));
@@ -46,13 +44,14 @@ export default function ConfigPage({ onDirtyChange, triggerSave, onSaveDone }: P
         try {
           await saveConfig(configRef.current!);
           message.success('Config saved');
+          savedConfigRef.current = configRef.current;
           await load();
           onDirtyChange?.(false);
-          onSaveDone?.();
         } catch (err) {
           message.error('Failed to save: ' + (err instanceof Error ? err.message : String(err)));
         } finally {
           savingRef.current = false;
+          onSaveDone?.();
         }
       })();
     }
@@ -60,25 +59,36 @@ export default function ConfigPage({ onDirtyChange, triggerSave, onSaveDone }: P
 
   const toggleEnabled = useCallback(
     async (index: number, enabled: boolean) => {
-      const cfg = configRef.current;
-      if (!cfg) return;
-      const tasks = cfg.tasks.map((t, i) => (i === index ? { ...t, enabled } : t));
-      const next = { ...cfg, tasks };
-      setConfig(next);
+      const saved = savedConfigRef.current;
+      if (!saved) return;
+      // Build minimal config: only change the enabled field on the specific task
+      const tasks = saved.tasks.map((t, i) => (i === index ? { ...t, enabled } : t));
+      const toSave = { ...saved, tasks };
       try {
-        await saveConfig(next);
-        onDirtyChange?.(false);
+        await saveConfig(toSave);
+        // Fetch latest from server to get any server-side changes (e.g. key assignment)
+        const fresh = await fetchConfig();
+        savedConfigRef.current = fresh;
+        // Sync only this task's enabled back into local config, preserving other edits
+        setConfig((prev) => {
+          if (!prev) return prev;
+          const updated = prev.tasks.map((t, i) =>
+            i === index ? { ...t, enabled: fresh.tasks[i]?.enabled ?? enabled } : t,
+          );
+          return { ...prev, tasks: updated };
+        });
       } catch (err) {
         message.error('Failed to save: ' + (err instanceof Error ? err.message : String(err)));
       }
     },
-    [onDirtyChange],
+    [],
   );
 
   function update(changes: Partial<ConfigFile>) {
     if (!config) return;
     const next = { ...config, ...changes };
     setConfig(next);
+    configRef.current = next;
     onDirtyChange?.(true);
   }
 

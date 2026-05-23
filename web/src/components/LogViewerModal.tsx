@@ -9,7 +9,7 @@ interface Props {
 }
 
 function ansiToHtml(text: string): string {
-  let result = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let result = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   // Simple one-pass replacement: each ANSI code maps to a span tag.
   // \x1b[0m always closes the current span (no nesting in our log output).
@@ -89,8 +89,8 @@ export default function LogViewerModal({ open, onClose }: Props) {
         {logs.length === 0 ? (
           <span style={{ color: '#666' }}>No logs yet</span>
         ) : (
-          [...logs].reverse().map((entry, i) => (
-            <div key={i}>
+          [...logs].reverse().map((entry) => (
+            <div key={entry.timestamp + entry.message.slice(0, 20)}>
               <span style={{ color: '#666', marginRight: 8 }}>{entry.timestamp}</span>
               <span dangerouslySetInnerHTML={{ __html: ansiToHtml(entry.message) }} />
             </div>

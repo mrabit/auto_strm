@@ -11,7 +11,7 @@ interface Props {
 }
 
 export default function RemoteFieldsEditor({ value = {}, defaults, onChange, showRequired, hidePath }: Props) {
-  function update(key: keyof RemoteConfig, val: unknown) {
+  function update<K extends keyof RemoteConfig>(key: K, val: RemoteConfig[K]) {
     onChange?.({ ...value, [key]: val === '' ? undefined : val });
   }
 

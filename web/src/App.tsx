@@ -8,6 +8,7 @@ const { Header, Content } = Layout;
 
 export default function App() {
   const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [saveTrigger, setSaveTrigger] = useState(0);
   const [logModalOpen, setLogModalOpen] = useState(false);
 
@@ -16,8 +17,10 @@ export default function App() {
       message.info('No changes to save');
       return;
     }
+    if (saving) return;
+    setSaving(true);
     setSaveTrigger((n) => n + 1);
-  }, [dirty]);
+  }, [dirty, saving]);
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -42,6 +45,7 @@ export default function App() {
             type="primary"
             icon={<SaveOutlined />}
             onClick={handleSave}
+            loading={saving}
           >
             Save
           </Button>
@@ -51,7 +55,7 @@ export default function App() {
         <ConfigPage
           onDirtyChange={setDirty}
           triggerSave={saveTrigger}
-          onSaveDone={() => setSaveTrigger(0)}
+          onSaveDone={() => { setSaveTrigger(0); setSaving(false); }}
         />
       </Content>
       <LogViewerModal

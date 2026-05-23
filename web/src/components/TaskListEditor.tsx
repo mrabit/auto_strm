@@ -3,12 +3,19 @@ import { PlusOutlined } from '@ant-design/icons';
 import TaskItemEditor from './TaskItemEditor';
 import type { RemoteConfig, RateLimitConfig, JellyfinConfig, RawTaskConfig } from '../types';
 
+let tmpId = 0;
+
 function emptyTask(): RawTaskConfig {
   return {
+    key: `__tmp__:${++tmpId}`,
     name: '',
     remote: {},
     local: { path: '' },
   };
+}
+
+function isNewTask(task: RawTaskConfig): boolean {
+  return !task.key || task.key.startsWith('__tmp__:');
 }
 
 interface Props {
@@ -40,12 +47,17 @@ export default function TaskListEditor({ tasks, defaults, onChange, onToggleEnab
 
   return (
     <div>
+      {tasks.length === 0 && (
+        <div style={{ textAlign: 'center', color: '#888', padding: '24px 0' }}>
+          No tasks yet. Click the button below to add one.
+        </div>
+      )}
       {tasks.map((task, i) => (
         <TaskItemEditor
           key={task.key}
           task={task}
           index={i}
-          isNew={!task.key}
+          isNew={isNewTask(task)}
           defaults={defaults}
           onChange={(t) => updateTask(i, t)}
           onDelete={() => removeTask(i)}

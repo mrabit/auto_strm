@@ -113,7 +113,13 @@ export function validateConfig(cfg: ConfigFile): void {
 
 export function load(): TaskConfig[] {
   const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
-  const cfg = JSON.parse(raw) as ConfigFile;
+  let cfg: ConfigFile;
+  try {
+    cfg = JSON.parse(raw) as ConfigFile;
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new Error(`config: failed to parse ${CONFIG_PATH}: ${detail}`);
+  }
 
   validateConfig(cfg);
 
@@ -124,7 +130,7 @@ export function load(): TaskConfig[] {
   let migrated = false;
 
   const tasks = cfg.tasks.map((task): TaskConfig => {
-    if (!task.key) {
+    if (!task.key || task.key.startsWith('__tmp__:')) {
       task.key = crypto.randomUUID();
       migrated = true;
     }

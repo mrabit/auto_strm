@@ -1,4 +1,5 @@
 import type { JellyfinConfig } from './config.js';
+import { errorMessage } from './utils.js';
 
 export async function refreshLibrary(jellyfin: JellyfinConfig): Promise<void> {
   const url = jellyfin.url.replace(/\/+$/, '') + '/Library/Refresh';
@@ -13,7 +14,6 @@ export async function refreshLibrary(jellyfin: JellyfinConfig): Promise<void> {
       console.log(`[jellyfin] library refresh queued`);
     }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.warn(`[jellyfin] library refresh failed: ${msg}`);
+    console.warn(`[jellyfin] library refresh failed: ${errorMessage(err)}`);
   }
 }
