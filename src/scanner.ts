@@ -61,12 +61,22 @@ export async function scan(
   client: WebDAVClient,
   remotePath: string,
   intervalMs = 0,
+  dirConcurrency = 3,
 ): Promise<ScanResult> {
   const metadataFiles: MetadataFile[] = [];
   const videoFiles: VideoFile[] = [];
+  let skippedDirs = 0;
 
   async function walk(dirPath: string, relDir: string): Promise<void> {
-    const items = (await client.getDirectoryContents(dirPath)) as DirectoryItem[];
+    let items: DirectoryItem[];
+    try {
+      items = (await client.getDirectoryContents(dirPath)) as DirectoryItem[];
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      console.warn(`[scanner] skip directory (HTTP ${status ?? '?'}): ${dirPath}`);
+      skippedDirs++;
+      return;
+    }
     if (intervalMs > 0) await delay(intervalMs);
 
     const subDirs: { path: string; rel: string }[] = [];
@@ -91,11 +101,25 @@ export async function scan(
       }
     }
 
-    // Traverse same-level directories concurrently
-    await Promise.all(subDirs.map((d) => walk(d.path, d.rel)));
+    // Traverse same-level directories with limited concurrency
+    let idx = 0;
+    async function dirWorker(): Promise<void> {
+      while (idx < subDirs.length) {
+        const d = subDirs[idx++];
+        await walk(d.path, d.rel);
+      }
+    }
+    await Promise.all(
+      Array.from({ length: Math.min(dirConcurrency, subDirs.length) }, () => dirWorker()),
+    );
   }
 
   await walk(remotePath, '');
+  if (skippedDirs > 0) {
+    console.warn(
+      `[scanner] skipped ${skippedDirs} director${skippedDirs === 1 ? 'y' : 'ies'} due to errors`,
+    );
+  }
   return { metadataFiles, videoFiles };
 }
 

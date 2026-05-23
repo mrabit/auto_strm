@@ -57,7 +57,12 @@ async function runTask(task: TaskConfig, overrideRemotePath?: string): Promise<v
       password: task.remote.password,
     });
 
-    const { metadataFiles, videoFiles } = await scan(client, scanPath, task.rateLimit.intervalMs);
+    const { metadataFiles, videoFiles } = await scan(
+      client,
+      scanPath,
+      task.rateLimit.intervalMs,
+      task.rateLimit.concurrency,
+    );
 
     let pathPrefix = '';
     if (isPartial) {
