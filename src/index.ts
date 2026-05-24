@@ -66,7 +66,7 @@ async function runTask(task: TaskConfig, overrideRemotePath?: string): Promise<v
 
     let pathPrefix = '';
     if (isPartial) {
-      const offset = overrideRemotePath!.slice(task.remote.path.length).replace(/^\//, '');
+      const offset = overrideRemotePath!.slice(task.remote.path.length).replace(/^\/+|\/+$/g, '');
       if (offset) pathPrefix = offset + '/';
     }
     const allMetadata = isPartial
