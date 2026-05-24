@@ -19,7 +19,7 @@ export function startServer(
   initialTasks: TaskConfig[],
 ): Promise<{ server: Server; updateTasks: (tasks: TaskConfig[]) => void; close: () => void }> {
   let allTasks = initialTasks;
-  const webhookTimers: ReturnType<typeof setTimeout>[] = [];
+  const webhookTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   // Clean up stale .tmp files
   const tmpPath = configPath + '.tmp';
@@ -135,17 +135,23 @@ export function startServer(
           }
         }
         if (bestMatch) {
+          const timerKey = `${bestMatch.task.name}:${targetPath}`;
+          const existing = webhookTimers.get(timerKey);
+          if (existing) clearTimeout(existing);
+
           const timer = setTimeout(() => {
-            webhookTimers.splice(webhookTimers.indexOf(timer), 1);
+            webhookTimers.delete(timerKey);
             schedulerHandle.runNow(bestMatch!.task.name, targetPath);
           }, 60_000);
-          webhookTimers.push(timer);
+          webhookTimers.set(timerKey, timer);
+
+          const action = existing ? 'replaced' : 'sync_triggered';
           console.log(
-            `[webhook] MoviePilot path "${targetPath}" → task "${bestMatch.task.name}" (delayed 60s)`,
+            `[webhook] MoviePilot path "${targetPath}" → task "${bestMatch.task.name}" (delayed 60s${existing ? ', replaced pending' : ''})`,
           );
           return res.json({
             success: true,
-            action: 'sync_triggered',
+            action,
             task: bestMatch.task.name,
             path: targetPath,
           });
@@ -188,8 +194,8 @@ export function startServer(
         },
         close: () => {
           // Cancel pending webhook timers
-          for (const timer of webhookTimers) clearTimeout(timer);
-          webhookTimers.length = 0;
+          for (const timer of webhookTimers.values()) clearTimeout(timer);
+          webhookTimers.clear();
           // Stop accepting new connections
           server.close();
           // Destroy existing connections
