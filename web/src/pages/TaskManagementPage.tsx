@@ -56,12 +56,11 @@ export default function TaskManagementPage() {
   }, [config?.tasks, filterStatus]);
 
   const stats = useMemo(() => {
-    if (!config) return { total: 0, enabled: 0, scheduled: 0, disabled: 0 };
+    if (!config) return { total: 0, enabled: 0, disabled: 0 };
     const tasks = config.tasks;
     return {
       total: tasks.length,
       enabled: tasks.filter((t) => t.enabled !== false).length,
-      scheduled: tasks.filter((t) => !!t.cron).length,
       disabled: tasks.filter((t) => t.enabled === false).length,
     };
   }, [config?.tasks]);
