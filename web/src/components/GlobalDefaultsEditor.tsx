@@ -12,11 +12,15 @@ interface Props {
   cron?: string;
   rateLimit?: ConfigFile['rateLimit'];
   jellyfin?: ConfigFile['jellyfin'];
+  metaExts?: string;
+  videoExts?: string;
   onChange: (patch: {
     remote?: ConfigFile['remote'];
     cron?: string;
     rateLimit?: ConfigFile['rateLimit'];
     jellyfin?: ConfigFile['jellyfin'];
+    metaExts?: string;
+    videoExts?: string;
   }) => void;
 }
 
@@ -25,6 +29,8 @@ const GlobalDefaultsEditor = React.memo(function GlobalDefaultsEditor({
   cron,
   rateLimit,
   jellyfin,
+  metaExts,
+  videoExts,
   onChange,
 }: Props) {
   return (
@@ -37,6 +43,22 @@ const GlobalDefaultsEditor = React.memo(function GlobalDefaultsEditor({
             placeholder="0 */6 * * *"
             value={cron}
             onChange={(e) => onChange({ cron: e.target.value || undefined })}
+          />
+        </Space.Compact>
+        <Space.Compact style={{ width: '100%', marginTop: 8 }}>
+          <Addon label="Meta Exts" />
+          <Input
+            placeholder=".nfo,.jpg,.jpeg,.png,..."
+            value={metaExts}
+            onChange={(e) => onChange({ metaExts: e.target.value || undefined })}
+          />
+        </Space.Compact>
+        <Space.Compact style={{ width: '100%', marginTop: 8 }}>
+          <Addon label="Video Exts" />
+          <Input
+            placeholder=".mkv,.iso,.ts,.mp4,..."
+            value={videoExts}
+            onChange={(e) => onChange({ videoExts: e.target.value || undefined })}
           />
         </Space.Compact>
         <div style={{ marginTop: 8 }}>

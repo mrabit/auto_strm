@@ -62,6 +62,10 @@ WEB_PORT=8080 docker compose up -d --build
     "concurrency": 5,
     "intervalMs": 200
   },
+  // 可选：元数据文件扩展名，逗号分隔，task 级别追加合并
+  "metaExts": ".nfo,.jpg,.jpeg,.png,.svg,.ass,.ssa,.srt,.sup,.mp3,.flac,.wav,.aac",
+  // 可选：视频文件扩展名，逗号分隔，task 级别追加合并
+  "videoExts": ".mkv,.iso,.ts,.mp4,.avi,.rmvb,.wmv,.m2ts,.mpg,.flv,.rm,.mov",
   // 可选：Jellyfin 服务器，新增 strm 后自动刷新媒体库
   "jellyfin": {
     "url": "http://your-jellyfin:8096",
@@ -76,6 +80,9 @@ WEB_PORT=8080 docker compose up -d --build
         "syncMetadata": false
       },
       "local": { "path": "/data/剧集" },
+      // 可选：追加扩展名到全局列表
+      "metaExts": ".idx",
+      "videoExts": ".flv",
       // 可选：覆盖全局 jellyfin 配置
       "jellyfin": {
         "url": "http://another-jellyfin:8096",
@@ -99,8 +106,10 @@ WEB_PORT=8080 docker compose up -d --build
 | `rateLimit.intervalMs` | 请求间隔（毫秒），默认 200 |
 | `jellyfin.url` | Jellyfin 服务地址 |
 | `jellyfin.token` | Jellyfin API Token |
+| `metaExts` | 元数据文件扩展名，逗号分隔，task 级别追加合并 |
+| `videoExts` | 视频文件扩展名，逗号分隔，task 级别追加合并 |
 
-顶层 `remote`、`cron`、`rateLimit`、`jellyfin` 均可选，省略时每个 task 必须填写对应字段。
+顶层 `remote`、`cron`、`rateLimit`、`jellyfin`、`metaExts`、`videoExts` 均可选，省略时每个 task 必须填写对应字段。
 Task 级别的 `jellyfin` 覆盖全局配置（整对象覆盖，非逐字段合并）。
 
 ## Webhook

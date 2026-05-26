@@ -3,6 +3,10 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { CronJob } from 'cron';
 
+export const DEFAULT_META_EXTS =
+  '.nfo,.jpg,.jpeg,.png,.svg,.ass,.ssa,.srt,.sup,.mp3,.flac,.wav,.aac';
+export const DEFAULT_VIDEO_EXTS = '.mkv,.iso,.ts,.mp4,.avi,.rmvb,.wmv,.m2ts,.mpg,.flv,.rm,.mov';
+
 export interface RemoteConfig {
   url?: string;
   username?: string;
@@ -46,6 +50,8 @@ export interface TaskConfig {
   rateLimit: RateLimitConfig;
   enabled: boolean;
   jellyfin?: JellyfinConfig;
+  metaExts: Set<string>;
+  videoExts: Set<string>;
 }
 
 export interface RawTaskConfig {
@@ -56,6 +62,8 @@ export interface RawTaskConfig {
   rateLimit?: Partial<RateLimitConfig>;
   enabled?: boolean;
   jellyfin?: JellyfinConfig;
+  metaExts?: string;
+  videoExts?: string;
   key?: string;
 }
 
@@ -64,11 +72,33 @@ export interface ConfigFile {
   cron?: string;
   rateLimit?: Partial<RateLimitConfig>;
   jellyfin?: JellyfinConfig;
+  metaExts?: string;
+  videoExts?: string;
   tasks: RawTaskConfig[];
 }
 
 const configFile = process.env.NODE_ENV === 'development' ? 'dev.json' : 'default.json';
 export const CONFIG_PATH = path.join(__dirname, '..', 'config', configFile);
+
+function csvToSet(csv: string): Set<string> {
+  return new Set(
+    csv
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter((s) => s.length > 0)
+      .map((s) => (s.startsWith('.') ? s : '.' + s)),
+  );
+}
+
+export function parseExtStr(input: string | undefined, defaultStr: string): Set<string> {
+  const result = csvToSet(input ?? '');
+  return result.size > 0 ? result : csvToSet(defaultStr);
+}
+
+function mergeExtSets(global: Set<string>, taskCsv: string | undefined): Set<string> {
+  if (!taskCsv) return global;
+  return new Set([...global, ...parseExtStr(taskCsv, '')]);
+}
 
 const DEFAULT_RATE_LIMIT: RateLimitConfig = {
   concurrency: 5,
@@ -78,6 +108,19 @@ const DEFAULT_RATE_LIMIT: RateLimitConfig = {
 export function validateConfig(cfg: ConfigFile): void {
   if (!cfg.tasks || !Array.isArray(cfg.tasks)) {
     throw new Error('config: "tasks" must be an array');
+  }
+
+  // Validate global ext formats if provided
+  for (const [field, value] of [
+    ['metaExts', cfg.metaExts],
+    ['videoExts', cfg.videoExts],
+  ] as const) {
+    if (value !== undefined && typeof value === 'string') {
+      const parsed = csvToSet(value);
+      if (parsed.size === 0) {
+        throw new Error(`config: ${field} is empty after parsing`);
+      }
+    }
   }
 
   const common = cfg.remote || {};
@@ -99,6 +142,19 @@ export function validateConfig(cfg: ConfigFile): void {
       new CronJob(cron, () => {});
     } catch {
       throw new Error(`config: ${label}: invalid cron expression "${cron}"`);
+    }
+
+    // Validate task-level ext formats if provided
+    for (const [field, value] of [
+      ['metaExts', task.metaExts],
+      ['videoExts', task.videoExts],
+    ] as const) {
+      if (value !== undefined && typeof value === 'string') {
+        const parsed = csvToSet(value);
+        if (parsed.size === 0) {
+          throw new Error(`config: ${label}: ${field} is empty after parsing`);
+        }
+      }
     }
 
     const jellyfin = task.jellyfin || cfg.jellyfin;
@@ -123,11 +179,23 @@ export function load(): TaskConfig[] {
 
   validateConfig(cfg);
 
+  let migrated = false;
+
+  // Persist default ext values into the config file
+  if (!cfg.metaExts) {
+    cfg.metaExts = DEFAULT_META_EXTS;
+    migrated = true;
+  }
+  if (!cfg.videoExts) {
+    cfg.videoExts = DEFAULT_VIDEO_EXTS;
+    migrated = true;
+  }
+
   const common = cfg.remote || {};
   const commonRateLimit: Partial<RateLimitConfig> = cfg.rateLimit || {};
   const commonCron = cfg.cron;
-
-  let migrated = false;
+  const globalMetaExts = parseExtStr(cfg.metaExts, DEFAULT_META_EXTS);
+  const globalVideoExts = parseExtStr(cfg.videoExts, DEFAULT_VIDEO_EXTS);
 
   const tasks = cfg.tasks.map((task): TaskConfig => {
     if (!task.key || task.key.startsWith('__tmp__:')) {
@@ -144,6 +212,9 @@ export function load(): TaskConfig[] {
 
     const jellyfin = task.jellyfin || cfg.jellyfin;
 
+    const metaExts = mergeExtSets(globalMetaExts, task.metaExts);
+    const videoExts = mergeExtSets(globalVideoExts, task.videoExts);
+
     const rateLimit: RateLimitConfig = {
       ...DEFAULT_RATE_LIMIT,
       ...commonRateLimit,
@@ -159,6 +230,8 @@ export function load(): TaskConfig[] {
       rateLimit,
       enabled: task.enabled ?? true,
       jellyfin,
+      metaExts,
+      videoExts,
     };
   });
 

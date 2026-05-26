@@ -16,6 +16,8 @@ interface Props {
     cron?: string;
     rateLimit?: ConfigFile['rateLimit'];
     jellyfin?: ConfigFile['jellyfin'];
+    metaExts?: string;
+    videoExts?: string;
   };
   isNew: boolean;
   onSave: (task: RawTaskConfig) => void;
@@ -23,7 +25,9 @@ interface Props {
 }
 
 export default function TaskEditModal({ open, task, defaults, isNew, onSave, onCancel }: Props) {
-  const [localTask, setLocalTask] = useState<RawTaskConfig>(task || { name: '', remote: {}, local: { path: '' } });
+  const [localTask, setLocalTask] = useState<RawTaskConfig>(
+    task || { name: '', remote: {}, local: { path: '' } },
+  );
   const [activeTab, setActiveTab] = useState('basic');
 
   useEffect(() => {
@@ -90,8 +94,24 @@ export default function TaskEditModal({ open, task, defaults, isNew, onSave, onC
                 onChange={(rateLimit) => updateLocal({ rateLimit })}
               />
             </div>
-            <div>
-              <div style={{ marginBottom: 4, color: '#888', fontSize: 12 }}>同步元数据</div>
+            <Space.Compact style={{ width: '100%', marginTop: 8 }}>
+              <Addon label="Video Exts" />
+              <Input
+                placeholder={defaults.videoExts || '(inherits global)'}
+                value={localTask.videoExts}
+                onChange={(e) => updateLocal({ videoExts: e.target.value || undefined })}
+              />
+            </Space.Compact>
+            <Space.Compact style={{ width: '100%' }}>
+              <Addon label="Meta Exts" />
+              <Input
+                placeholder={defaults.metaExts || '(inherits global)'}
+                value={localTask.metaExts}
+                onChange={(e) => updateLocal({ metaExts: e.target.value || undefined })}
+              />
+            </Space.Compact>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: '#888', fontSize: 12 }}>同步元数据</span>
               <Switch
                 checked={localTask.remote?.syncMetadata !== false}
                 checkedChildren="是"

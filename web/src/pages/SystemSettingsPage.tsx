@@ -10,7 +10,7 @@ export default function SystemSettingsPage() {
   }
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto' }}>
+    <div>
       <h2 style={{ marginBottom: 8, fontSize: 22, fontWeight: 600 }}>系统设置</h2>
       <p style={{ color: '#666', marginBottom: 24 }}>全局默认配置，应用于所有任务。</p>
       <GlobalDefaultsEditor
@@ -18,6 +18,8 @@ export default function SystemSettingsPage() {
         cron={config.cron}
         rateLimit={config.rateLimit}
         jellyfin={config.jellyfin}
+        metaExts={config.metaExts}
+        videoExts={config.videoExts}
         onChange={(patch) => update(patch)}
       />
     </div>

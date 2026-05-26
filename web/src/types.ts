@@ -30,6 +30,8 @@ export interface RawTaskConfig {
   cron?: string;
   rateLimit?: RateLimitConfig;
   jellyfin?: JellyfinConfig;
+  metaExts?: string;
+  videoExts?: string;
   key?: string;
 }
 
@@ -38,6 +40,8 @@ export interface ConfigFile {
   cron?: string;
   rateLimit?: RateLimitConfig;
   jellyfin?: JellyfinConfig;
+  metaExts?: string;
+  videoExts?: string;
   tasks: RawTaskConfig[];
   lastSyncTimes?: Record<string, string>;
 }

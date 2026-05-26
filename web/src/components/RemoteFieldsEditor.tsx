@@ -1,4 +1,4 @@
-import { Input, Switch, Space } from 'antd';
+import { Input, Space } from 'antd';
 import Addon from './Addon';
 import type { RemoteConfig } from '../types';
 
@@ -67,13 +67,6 @@ export default function RemoteFieldsEditor({ value = {}, defaults, onChange, sho
           onChange={(e) => update('publicUrl', e.target.value)}
         />
       </Space.Compact>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span>Sync Metadata:</span>
-        <Switch
-          checked={value.syncMetadata !== false}
-          onChange={(v) => update('syncMetadata', v)}
-        />
-      </div>
     </>
   );
 }

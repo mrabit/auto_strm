@@ -60,6 +60,8 @@ async function runTask(task: TaskConfig, overrideRemotePath?: string): Promise<v
     const { metadataFiles, videoFiles } = await scan(
       client,
       scanPath,
+      task.metaExts,
+      task.videoExts,
       task.rateLimit.intervalMs,
       task.rateLimit.concurrency,
     );

@@ -10,6 +10,8 @@
     "concurrency": 5,
     "intervalMs": 200
   },
+  "metaExts": ".nfo,.jpg,.jpeg,.png,.svg,.ass,.ssa,.srt,.sup,.mp3,.flac,.wav,.aac",
+  "videoExts": ".mkv,.iso,.ts,.mp4,.avi,.rmvb,.wmv,.m2ts,.mpg,.flv,.rm,.mov",
   "jellyfin": {
     "url": "http://your-jellyfin:8096",
     "token": "your-api-token"
@@ -30,6 +32,8 @@
         "concurrency": 3,
         "intervalMs": 500
       },
+      "metaExts": ".idx",
+      "videoExts": ".flv",
       "jellyfin": {
         "url": "http://another-jellyfin:8096",
         "token": "another-token"

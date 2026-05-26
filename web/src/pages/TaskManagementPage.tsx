@@ -163,6 +163,8 @@ export default function TaskManagementPage() {
           cron: config.cron,
           rateLimit: config.rateLimit,
           jellyfin: config.jellyfin,
+          metaExts: config.metaExts,
+          videoExts: config.videoExts,
         }}
         isNew={editingIndex !== null ? isNewTask(config.tasks[editingIndex]) : false}
         onSave={handleSaveTask}

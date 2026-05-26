@@ -26,40 +26,11 @@ interface DirectoryItem {
   mime?: string;
 }
 
-const metaExts = new Set([
-  '.nfo',
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.svg',
-  '.ass',
-  '.ssa',
-  '.srt',
-  '.sup',
-  '.mp3',
-  '.flac',
-  '.wav',
-  '.aac',
-]);
-
-const videoExts = new Set([
-  '.mkv',
-  '.iso',
-  '.ts',
-  '.mp4',
-  '.avi',
-  '.rmvb',
-  '.wmv',
-  '.m2ts',
-  '.mpg',
-  '.flv',
-  '.rm',
-  '.mov',
-]);
-
 export async function scan(
   client: WebDAVClient,
   remotePath: string,
+  metaExts: Set<string>,
+  videoExts: Set<string>,
   intervalMs = 0,
   dirConcurrency = 3,
 ): Promise<ScanResult> {

@@ -100,7 +100,7 @@ WEB_PORT=8080 docker compose up --build
 
 ## Config schema
 
-Top-level `remote`, `cron`, and `rateLimit` provide common defaults shared across tasks. Each task can override any field. `remote.path` and `local.path` must be defined per-task — they cannot be inherited from global defaults.
+Top-level `remote`, `cron`, and `rateLimit` provide common defaults shared across tasks. Each task can override any field. `remote.path` and `local.path` must be defined per-task — they cannot be inherited from global defaults. `metaExts` and `videoExts` are comma-separated strings with built-in defaults; task-level values are **unioned** (appended) with global values.
 
 ```jsonc
 {
@@ -116,6 +116,8 @@ Top-level `remote`, `cron`, and `rateLimit` provide common defaults shared acros
     "concurrency": 5,                // default 5
     "intervalMs": 200                // default 200ms between requests
   },
+  "metaExts": ".nfo,.jpg,.png",     // optional: global metadata extensions (default: built-in list)
+  "videoExts": ".mkv,.mp4",         // optional: global video extensions (default: built-in list)
   "tasks": [
     {
       "name": "example",
@@ -130,7 +132,9 @@ Top-level `remote`, `cron`, and `rateLimit` provide common defaults shared acros
       "rateLimit": {                  // optional: per-task override
         "concurrency": 3,
         "intervalMs": 500
-      }
+      },
+      "metaExts": ".idx",             // optional: appended to global metaExts
+      "videoExts": ".flv"             // optional: appended to global videoExts
     }
   ]
 }
@@ -169,6 +173,8 @@ interface TaskConfig {
   cron: string;
   rateLimit: RateLimitConfig;
   enabled: boolean; // default true
+  metaExts: Set<string>; // union of global + task extensions
+  videoExts: Set<string>; // union of global + task extensions
 }
 ```
 
@@ -176,6 +182,7 @@ Merge: `{ ...commonRemote, ...taskRemote }` — task values take precedence.
 Cron merge: `task.cron || commonCron` — task wins, falls back to top-level.
 Rate limit merge: `DEFAULT → top-level rateLimit → task rateLimit` — each field merges independently.
 Enabled: `task.enabled ?? true` — per-task only, no common override.
+MetaExts/VideoExts merge: **union** — task extensions are appended to global extensions.
 
 ## .strm URL format
 
@@ -277,9 +284,11 @@ npx prettier --write src/config.ts src/jellyfin.ts  # auto-fix formatting
 
 ## File classification
 
-Metadata extensions synced as-is: `.nfo .jpg .jpeg .png .svg .ass .ssa .srt .sup .mp3 .flac .wav .aac`
+Metadata extensions synced as-is (default, configurable via `metaExts`): `.nfo .jpg .jpeg .png .svg .ass .ssa .srt .sup .mp3 .flac .wav .aac`
 
-Video extensions trigger `.strm` generation: `.mkv .iso .ts .mp4 .avi .rmvb .wmv .m2ts .mpg .flv .rm .mov`
+Video extensions trigger `.strm` generation (default, configurable via `videoExts`): `.mkv .iso .ts .mp4 .avi .rmvb .wmv .m2ts .mpg .flv .rm .mov`
+
+Task-level `metaExts`/`videoExts` are **unioned** with global values (append, not replace). Defaults are defined in `config.ts` as `DEFAULT_META_EXTS` and `DEFAULT_VIDEO_EXTS`.
 
 ## Gotchas
 
