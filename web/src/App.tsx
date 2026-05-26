@@ -1,67 +1,60 @@
-import { useState, useCallback } from 'react';
-import { Layout, Button, Space, message } from 'antd';
-import { SaveOutlined, FileTextOutlined } from '@ant-design/icons';
-import ConfigPage from './pages/ConfigPage';
-import LogViewerModal from './components/LogViewerModal';
+import React, { Suspense } from 'react';
+import { Routes, Route, Outlet } from 'react-router-dom';
+import { Spin } from 'antd';
+import AppLayout from './layouts/AppLayout';
+import { ConfigStateProvider } from './hooks/useConfigState';
 
-const { Header, Content } = Layout;
+const TaskManagementPage = React.lazy(() => import('./pages/TaskManagementPage'));
+const LogViewerPage = React.lazy(() => import('./pages/LogViewerPage'));
+const SystemSettingsPage = React.lazy(() => import('./pages/SystemSettingsPage'));
+
+function PageLoader() {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+      <Spin size="large" />
+    </div>
+  );
+}
+
+function ConfigRoutes() {
+  return (
+    <ConfigStateProvider>
+      <Outlet />
+    </ConfigStateProvider>
+  );
+}
 
 export default function App() {
-  const [dirty, setDirty] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveTrigger, setSaveTrigger] = useState(0);
-  const [logModalOpen, setLogModalOpen] = useState(false);
-
-  const handleSave = useCallback(() => {
-    if (!dirty) {
-      message.info('No changes to save');
-      return;
-    }
-    if (saving) return;
-    setSaving(true);
-    setSaveTrigger((n) => n + 1);
-  }, [dirty, saving]);
-
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: '#001529',
-          padding: '0 24px',
-        }}
-      >
-        <h1 style={{ color: '#fff', margin: 0, fontSize: 20 }}>Auto STRM</h1>
-        <Space>
-          <Button
-            icon={<FileTextOutlined />}
-            onClick={() => setLogModalOpen(true)}
-          >
-            Logs
-          </Button>
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-            onClick={handleSave}
-            loading={saving}
-          >
-            Save
-          </Button>
-        </Space>
-      </Header>
-      <Content style={{ padding: 24, background: '#f5f5f5' }}>
-        <ConfigPage
-          onDirtyChange={setDirty}
-          triggerSave={saveTrigger}
-          onSaveDone={() => { setSaveTrigger(0); setSaving(false); }}
+    <Routes>
+      <Route element={<AppLayout />}>
+        <Route element={<ConfigRoutes />}>
+          <Route
+            path="/"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <TaskManagementPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <SystemSettingsPage />
+              </Suspense>
+            }
+          />
+        </Route>
+        <Route
+          path="/logs"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <LogViewerPage />
+            </Suspense>
+          }
         />
-      </Content>
-      <LogViewerModal
-        open={logModalOpen}
-        onClose={() => setLogModalOpen(false)}
-      />
-    </Layout>
+      </Route>
+    </Routes>
   );
 }

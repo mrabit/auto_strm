@@ -19,7 +19,7 @@ export default function JellyfinFields({ value = {}, inherited, onChange }: Prop
         Enabled{' '}
         <Switch
           size="small"
-          checked={value.enabled !== false}
+          checked={value.enabled === true}
           onChange={(v) => update('enabled', v)}
         />
       </div>

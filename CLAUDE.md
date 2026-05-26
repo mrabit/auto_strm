@@ -59,25 +59,38 @@ WEB_PORT=8080 docker compose up --build
 │   └── utils.ts           # Shared: delay(), pad(), errorMessage()
 ├── web/
 │   ├── src/
-│   │   ├── main.tsx       # React entry point
-│   │   ├── App.tsx        # Ant Design layout: header with save/reload, content area
-│   │   ├── api.ts         # fetchConfig() / saveConfig() — REST client for /api/config
-│   │   ├── types.ts       # ConfigFile, RawTaskConfig, etc. (mirrors backend types)
+│   │   ├── main.tsx               # React entry point
+│   │   ├── App.tsx                # App root with config state management
+│   │   ├── api.ts                 # REST client for /api/config
+│   │   ├── types.ts               # ConfigFile, RawTaskConfig, etc. (mirrors backend types)
+│   │   ├── layouts/
+│   │   │   └── AppLayout.tsx      # Sidebar + content area shell
 │   │   ├── pages/
-│   │   │   └── ConfigPage.tsx  # Main config editor: global defaults + task list
-│   │   └── components/
-│   │       ├── GlobalDefaultsEditor.tsx  # Top-level remote/cron/rateLimit form
-│   │       ├── TaskListEditor.tsx        # Task array: add/remove cards
-│   │       ├── TaskItemEditor.tsx        # Single task card with collapsible fields
-│   │       ├── RemoteFieldsEditor.tsx    # Reusable remote config form fields
-│   │       ├── RateLimitFields.tsx       # Concurrency/interval input fields
-│   │       ├── JellyfinFields.tsx        # Reusable Jellyfin url/token input fields
-│   │       ├── Addon.tsx                 # Compact input label prefix
-│   │       ├── cleanJellyfin.ts          # Shared Jellyfin field cleanup (return undefined if empty)
-│   │       └── ErrorBoundary.tsx         # Global error boundary, wraps <App />
+│   │   │   ├── TaskManagementPage.tsx  # Task list + stats dashboard
+│   │   │   ├── LogViewerPage.tsx       # Real-time log viewer with ANSI color
+│   │   │   └── SystemSettingsPage.tsx  # Global defaults editor
+│   │   ├── components/
+│   │   │   ├── Sidebar.tsx            # Navigation sidebar
+│   │   │   ├── StatsCard.tsx          # Single stats card with gradient
+│   │   │   ├── StatsDashboard.tsx     # Stats card grid (total/enabled/syncing/disabled)
+│   │   │   ├── TaskListView.tsx       # Filtered task list
+│   │   │   ├── TaskListItem.tsx       # Single task row
+│   │   │   ├── TaskEditModal.tsx      # Modal editor (tabbed: basic/advanced/jellyfin)
+│   │   │   ├── GlobalDefaultsEditor.tsx  # Top-level remote/cron/rateLimit form
+│   │   │   ├── RemoteFieldsEditor.tsx    # Reusable remote config form fields
+│   │   │   ├── RateLimitFields.tsx       # Concurrency/interval input fields
+│   │   │   ├── JellyfinFields.tsx        # Reusable Jellyfin url/token input fields
+│   │   │   ├── Addon.tsx                 # Compact input label prefix
+│   │   │   ├── cleanJellyfin.ts          # Shared Jellyfin field cleanup (return undefined if empty)
+│   │   │   └── ErrorBoundary.tsx         # Global error boundary, wraps <App />
+│   │   ├── hooks/
+│   │   │   ├── useConfigState.tsx  # Config load/save/in-memory state hook
+│   │   │   └── useResponsive.ts   # Responsive breakpoint hook
+│   │   └── utils/
+│   │       └── ansiToHtml.ts      # ANSI escape code to HTML converter
 │   ├── package.json
 │   ├── vite.config.ts
-│   └── dist/               # Built frontend (served by Express in production)
+│   └── dist/                      # Built frontend (served by Express in production)
 ├── tsconfig.json
 ├── package.json
 └── data/                  # Local sync destination (Docker volume mount)

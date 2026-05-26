@@ -1,3 +1,4 @@
+import React from 'react';
 import { Collapse, Input, Space } from 'antd';
 import Addon from './Addon';
 import RemoteFieldsEditor from './RemoteFieldsEditor';
@@ -19,7 +20,7 @@ interface Props {
   }) => void;
 }
 
-export default function GlobalDefaultsEditor({
+const GlobalDefaultsEditor = React.memo(function GlobalDefaultsEditor({
   value,
   cron,
   rateLimit,
@@ -56,4 +57,6 @@ export default function GlobalDefaultsEditor({
       </Collapse.Panel>
     </Collapse>
   );
-}
+});
+
+export default GlobalDefaultsEditor;

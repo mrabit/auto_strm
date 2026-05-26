@@ -39,6 +39,7 @@ export interface ConfigFile {
   rateLimit?: RateLimitConfig;
   jellyfin?: JellyfinConfig;
   tasks: RawTaskConfig[];
+  lastSyncTimes?: Record<string, string>;
 }
 
 export interface LogEntry {

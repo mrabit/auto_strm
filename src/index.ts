@@ -141,6 +141,12 @@ async function runWithLimit<T, R>(
   return results;
 }
 
+const lastSyncTimes = new Map<string, string>();
+
+export function getLastSyncTimes(): Map<string, string> {
+  return lastSyncTimes;
+}
+
 async function main() {
   const allTasks = load();
   const enabled = allTasks.filter((t) => t.enabled);
@@ -163,6 +169,7 @@ async function main() {
     running++;
     try {
       await runTask(task, overrideRemotePath);
+      lastSyncTimes.set(task.key!, new Date().toISOString());
     } finally {
       running--;
       runningTasks.delete(task.name);

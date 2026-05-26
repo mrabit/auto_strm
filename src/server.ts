@@ -8,6 +8,7 @@ import type { Socket } from 'node:net';
 import { load, validateConfig } from './config';
 import type { ConfigFile, TaskConfig } from './config';
 import type { SchedulerHandle } from './scheduler';
+import { getLastSyncTimes } from './index';
 import { getLogs } from './logger';
 import { errorMessage } from './utils';
 
@@ -42,7 +43,8 @@ export function startServer(
           if (!t.key) t.key = crypto.randomUUID();
         }
       }
-      res.json(cfg);
+      const times = Object.fromEntries(getLastSyncTimes());
+      res.json({ ...cfg, lastSyncTimes: times });
     } catch (err) {
       const msg = errorMessage(err);
       res.status(500).json({ error: msg });
@@ -51,11 +53,16 @@ export function startServer(
 
   app.put('/api/config', async (req, res) => {
     try {
-      const newCfg = req.body as ConfigFile;
+      const newCfg = req.body as ConfigFile & { lastSyncTimes?: Record<string, string> };
       validateConfig(newCfg);
 
+      // Strip runtime-only lastSyncTimes before writing to disk
+      const cfgToWrite = Object.fromEntries(
+        Object.entries(newCfg).filter(([k]) => k !== 'lastSyncTimes'),
+      ) as ConfigFile;
+
       const tmpPath = configPath + '.tmp';
-      await fsp.writeFile(tmpPath, JSON.stringify(newCfg, null, 2), 'utf-8');
+      await fsp.writeFile(tmpPath, JSON.stringify(cfgToWrite, null, 2), 'utf-8');
       await fsp.rename(tmpPath, configPath);
 
       allTasks = load();
