@@ -15,11 +15,12 @@ export default function JellyfinFields({ value = {}, inherited, onChange }: Prop
 
   return (
     <>
-      <div style={{ marginBottom: 8 }}>
-        Enabled{' '}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <span style={{ color: '#888', fontSize: 12 }}>已启用</span>
         <Switch
-          size="small"
           checked={value.enabled === true}
+          checkedChildren="是"
+          unCheckedChildren="否"
           onChange={(v) => update('enabled', v)}
         />
       </div>
