@@ -9,6 +9,19 @@ import type { SchedulerHandle } from './scheduler';
 import type { TaskConfig } from './config';
 import { delay, pad, errorMessage } from './utils';
 
+// Capture unhandled exceptions and rejections
+process.on('uncaughtException', (err) => {
+  console.error('[fatal] uncaught exception:', err.message || err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error(
+    '[fatal] unhandled rejection:',
+    reason instanceof Error ? reason.message : String(reason),
+  );
+});
+
 const C = {
   reset: '\x1b[0m',
   dim: '\x1b[2m',

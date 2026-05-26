@@ -168,16 +168,24 @@ export function validateConfig(cfg: ConfigFile): void {
 }
 
 export function load(): TaskConfig[] {
+  console.log(`[config] loading config from ${CONFIG_PATH}`);
   const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
   let cfg: ConfigFile;
   try {
     cfg = JSON.parse(raw) as ConfigFile;
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
+    console.error(`[config] failed to parse ${CONFIG_PATH}: ${detail}`);
     throw new Error(`config: failed to parse ${CONFIG_PATH}: ${detail}`);
   }
 
-  validateConfig(cfg);
+  try {
+    validateConfig(cfg);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error(`[config] validation failed: ${detail}`);
+    throw err;
+  }
 
   let migrated = false;
 
@@ -239,7 +247,9 @@ export function load(): TaskConfig[] {
     const tmpPath = CONFIG_PATH + '.tmp';
     fs.writeFileSync(tmpPath, JSON.stringify(cfg, null, 2), 'utf-8');
     fs.renameSync(tmpPath, CONFIG_PATH);
+    console.log(`[config] migrated config file`);
   }
 
+  console.log(`[config] loaded ${tasks.length} task(s) successfully`);
   return tasks;
 }

@@ -50,7 +50,7 @@ export function ConfigStateProvider({ children }: { children: ReactNode }) {
     load();
   }, [load]);
 
-  const save = useCallback(() => {
+  const save = useCallback(async () => {
     if (!dirty) {
       message.info('No changes to save');
       return;
@@ -58,20 +58,18 @@ export function ConfigStateProvider({ children }: { children: ReactNode }) {
     if (savingRef.current) return;
     savingRef.current = true;
     setSaving(true);
-    (async () => {
-      try {
-        await saveConfig(configRef.current!);
-        message.success('Config saved');
-        savedConfigRef.current = configRef.current;
-        await load();
-        setDirty(false);
-      } catch (err) {
-        message.error('Failed to save: ' + (err instanceof Error ? err.message : String(err)));
-      } finally {
-        savingRef.current = false;
-        setSaving(false);
-      }
-    })();
+    try {
+      await saveConfig(configRef.current!);
+      message.success('Config saved');
+      savedConfigRef.current = configRef.current;
+      await load();
+      setDirty(false);
+    } catch (err) {
+      message.error('Failed to save: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }, [dirty, load]);
 
   const toggleEnabled = useCallback(

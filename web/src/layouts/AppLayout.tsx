@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from 'antd';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
@@ -11,20 +11,9 @@ export default function AppLayout() {
   const { isMobile } = useResponsive();
   const location = useLocation();
 
-  const handleCollapse = useCallback(
-    (val: boolean) => {
-      setCollapsed(val);
-    },
-    [],
-  );
-
   useEffect(() => {
     if (isMobile) setCollapsed(true);
-  }, [isMobile]);
-
-  useEffect(() => {
-    if (isMobile) setCollapsed(true);
-  }, [location.pathname, isMobile]);
+  }, [isMobile, location.pathname]);
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -39,7 +28,7 @@ export default function AppLayout() {
           }}
         />
       )}
-      <Sidebar collapsed={collapsed} onCollapse={handleCollapse} />
+      <Sidebar collapsed={collapsed} onCollapse={setCollapsed} />
       <Layout style={{ marginLeft: isMobile ? 0 : collapsed ? 80 : 220, transition: 'margin-left 0.2s' }}>
         <Content
           style={{

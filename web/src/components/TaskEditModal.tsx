@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Tabs, Input, Switch, Space } from 'antd';
+import { Modal, Tabs, Input, Switch, Space, message } from 'antd';
 import Addon from './Addon';
 import RemoteFieldsEditor from './RemoteFieldsEditor';
 import RateLimitFields from './RateLimitFields';
@@ -42,7 +42,53 @@ export default function TaskEditModal({ open, task, defaults, isNew, onSave, onC
   }
 
   function handleOk() {
+    if (!validate()) return;
     onSave(localTask);
+  }
+
+  function validate(): boolean {
+    const remote = localTask.remote || {};
+    const url = remote.url || defaults.remote?.url;
+    const username = remote.username || defaults.remote?.username;
+    const password = remote.password || defaults.remote?.password;
+    const cron = localTask.cron || defaults.cron;
+
+    if (!remote.path) {
+      message.error('远程路径不能为空');
+      setActiveTab('basic');
+      return false;
+    }
+    if (!localTask.local?.path) {
+      message.error('本地路径不能为空');
+      setActiveTab('basic');
+      return false;
+    }
+    if (!url) {
+      message.error('远程服务器地址不能为空（任务或全局配置）');
+      setActiveTab('basic');
+      return false;
+    }
+    if (!username) {
+      message.error('用户名不能为空（任务或全局配置）');
+      setActiveTab('basic');
+      return false;
+    }
+    if (!password) {
+      message.error('密码不能为空（任务或全局配置）');
+      setActiveTab('basic');
+      return false;
+    }
+    if (!cron) {
+      message.error('Cron 表达式不能为空（任务或全局配置）');
+      setActiveTab('advanced');
+      return false;
+    }
+    if (localTask.jellyfin?.url && !localTask.jellyfin?.token) {
+      message.error('Jellyfin Token 不能为空');
+      setActiveTab('jellyfin');
+      return false;
+    }
+    return true;
   }
 
   return (

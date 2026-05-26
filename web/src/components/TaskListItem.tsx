@@ -1,6 +1,13 @@
 import React from 'react';
 import { Button, Space, Tag, Popconfirm, Tooltip } from 'antd';
-import { SyncOutlined, EditOutlined, DeleteOutlined, FolderOutlined, PauseCircleOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import {
+  SyncOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  FolderOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
+} from '@ant-design/icons';
 import useResponsive from '../hooks/useResponsive';
 import type { RawTaskConfig } from '../types';
 
@@ -11,7 +18,6 @@ interface Props {
   onDelete: () => void;
   onToggleEnabled: (enabled: boolean) => void;
   onSync: () => void;
-  syncing: boolean;
   lastSyncTime?: Date;
 }
 
@@ -22,7 +28,6 @@ const TaskListItem = React.memo(function TaskListItem({
   onDelete,
   onToggleEnabled,
   onSync,
-  syncing,
   lastSyncTime,
 }: Props) {
   const { isMobile } = useResponsive();
@@ -87,9 +92,7 @@ const TaskListItem = React.memo(function TaskListItem({
         }}
       >
         {lastSyncTime && (
-          <span style={{ color: '#999', fontSize: 12 }}>
-            {lastSyncTime.toLocaleTimeString()}
-          </span>
+          <span style={{ color: '#999', fontSize: 12 }}>{lastSyncTime.toLocaleTimeString()}</span>
         )}
         <Tag color={enabled ? 'green' : 'default'}>{enabled ? '已启用' : '已禁用'}</Tag>
         <Tooltip title={enabled ? '禁用任务' : '启用任务'}>
@@ -101,7 +104,7 @@ const TaskListItem = React.memo(function TaskListItem({
           />
         </Tooltip>
         <Space size={4}>
-          <Button size="small" icon={<SyncOutlined />} loading={syncing} onClick={onSync} />
+          <Button size="small" icon={<SyncOutlined />} onClick={onSync} />
           <Button size="small" icon={<EditOutlined />} onClick={onEdit} />
           <Popconfirm title="确认删除？" onConfirm={onDelete} okText="删除" cancelText="取消">
             <Button size="small" danger icon={<DeleteOutlined />} />
