@@ -211,7 +211,7 @@ Metadata downloads and strm generation run concurrently within each task. Contro
 - **Web server (opt-in)**: set `WEB_PORT` env var to enable the web UI. Express serves the React SPA on `/` and REST API on `/api/*`. When `WEB_PORT` is unset, the app runs headless as before.
 - **Config management API**: `GET /api/config` returns the raw config JSON. `PUT /api/config` validates the body, writes atomically (tmp + rename), and triggers scheduler reload. Passwords are returned in plain text — the frontend `Input.Password` component handles visual masking.
 - **Task enable toggle instant save**: switching a task's enabled/disabled state immediately saves only the `enabled` field (uses `savedConfigRef` to isolate from other unsaved edits). New tasks use `__tmp__:N` prefix for unique React keys, replaced with real UUID on first save.
-- **Save button loading**: App tracks `saving` state; `onSaveDone` is called in `finally` block so the button recovers even if save/load fails.
+- **Save flow**: `useConfigState.save()` handles the full save lifecycle — checks dirty flag, calls `saveConfig()`, reloads config, updates `savedConfigRef`. `saving` state tracks in-progress saves. `toggleEnabled` saves directly without going through the save function for instant task enable/disable.
 - **Config hot-reload**: `fs.watchFile` monitors the config file. On change, config is reloaded, cron jobs are rebuilt. Existing tasks only get updated cron schedules (no immediate re-run); genuinely new tasks fire immediately. Parse errors leave old jobs running untouched.
 - **Incremental sync**: metadata files are skipped if the local file already exists (existence-only check, no size/mtime comparison). `.strm` files are skipped if content matches.
 - **Error cleanup**: partial downloads are deleted on failure so the next run retries cleanly.
@@ -256,9 +256,9 @@ When adding a new config field (e.g. `jellyfin`), update ALL of:
 1. `web/src/types.ts` — add interface + fields to `ConfigFile` and `RawTaskConfig`
 2. Create/reuse a Fields component (follow `RateLimitFields` or `JellyfinFields` pattern)
 3. `GlobalDefaultsEditor.tsx` — add input section, pass through props
-4. `TaskItemEditor.tsx` — add collapsible section with inherited placeholder
-5. `ConfigPage.tsx` — pass field to both editors
-6. `TaskListEditor.tsx` — add to `defaults` prop type
+4. `TaskEditModal.tsx` — add tab with inherited placeholder
+5. `SystemSettingsPage.tsx` — pass field to GlobalDefaultsEditor
+6. `TaskManagementPage.tsx` — pass field to TaskEditModal defaults
 
 ## Verification
 
@@ -294,4 +294,3 @@ Task-level `metaExts`/`videoExts` are **unioned** with global values (append, no
 
 - **Socket type**: import from `node:net`, not `node:http`
 - **Dockerfile non-root**: don't add non-root USER if config dir is volume-mounted (EACCES on write)
-- **Collapse antd v5**: children mode (`<Collapse.Panel>`) preserves expand/collapse state across re-renders
