@@ -56,12 +56,11 @@ export default function TaskManagementPage() {
   }, [config?.tasks, filterStatus]);
 
   const stats = useMemo(() => {
-    if (!config) return { total: 0, enabled: 0, disabled: 0 };
+    if (!config) return { total: 0, enabled: 0 };
     const tasks = config.tasks;
     return {
       total: tasks.length,
       enabled: tasks.filter((t) => t.enabled !== false).length,
-      disabled: tasks.filter((t) => t.enabled === false).length,
     };
   }, [config?.tasks]);
 
@@ -114,7 +113,7 @@ export default function TaskManagementPage() {
         <Radio.Group value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
           <Radio.Button value="all">全部 ({stats.total})</Radio.Button>
           <Radio.Button value="enabled">已启用 ({stats.enabled})</Radio.Button>
-          <Radio.Button value="disabled">已禁用 ({stats.disabled})</Radio.Button>
+          <Radio.Button value="disabled">已禁用 ({stats.total - stats.enabled})</Radio.Button>
         </Radio.Group>
         <Button icon={<PlusOutlined />} onClick={handleAddTask} loading={saving}>
           添加任务
