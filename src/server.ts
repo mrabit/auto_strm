@@ -9,7 +9,7 @@ import { load, validateConfig } from './config';
 import type { ConfigFile, TaskConfig } from './config';
 import type { SchedulerHandle } from './scheduler';
 import { getLastSyncTimes } from './index';
-import { getLogs } from './logger';
+import { getLogs, onLog } from './logger';
 import { errorMessage } from './utils';
 
 export function startServer(
@@ -175,6 +175,26 @@ export function startServer(
 
   app.get('/api/logs', (_req, res) => {
     res.json(getLogs());
+  });
+
+  app.get('/api/logs/stream', (req, res) => {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    });
+
+    // Send history
+    for (const entry of getLogs()) {
+      res.write(`data: ${JSON.stringify(entry)}\n\n`);
+    }
+
+    // Subscribe to new entries
+    const unsubscribe = onLog((entry) => {
+      res.write(`data: ${JSON.stringify(entry)}\n\n`);
+    });
+
+    req.on('close', () => unsubscribe());
   });
 
   // Static files + SPA fallback

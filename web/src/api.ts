@@ -30,3 +30,15 @@ export async function fetchLogs(): Promise<LogEntry[]> {
   if (!res.ok) return handleError(res);
   return res.json();
 }
+
+export function subscribeLogs(onEntry: (entry: LogEntry) => void): () => void {
+  const es = new EventSource('/api/logs/stream');
+  es.onmessage = (e) => {
+    try {
+      onEntry(JSON.parse(e.data));
+    } catch {
+      // malformed data, ignore
+    }
+  };
+  return () => es.close();
+}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Button, Radio, Input, Space, Switch } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
-import { fetchLogs } from '../api';
+import { subscribeLogs } from '../api';
 import ansiToHtml from '../utils/ansiToHtml';
 import type { LogEntry } from '../types';
 
@@ -10,31 +10,23 @@ export default function LogViewerPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [levelFilter, setLevelFilter] = useState<'all' | 'info' | 'warn' | 'error'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const unsubRef = useRef<(() => void) | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      setLogs(await fetchLogs());
-    } catch {
-      // silent
-    }
-  }, []);
-
+  // SSE subscription — endpoint replays history on connect
   useEffect(() => {
-    load();
-  }, [load]);
-
-  useEffect(() => {
-    if (autoRefresh) {
-      timerRef.current = setInterval(load, 2000);
+    if (!autoRefresh) {
+      unsubRef.current?.();
+      unsubRef.current = null;
+      return;
     }
+    unsubRef.current = subscribeLogs((entry) => {
+      setLogs((prev) => [...prev, entry]);
+    });
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+      unsubRef.current?.();
+      unsubRef.current = null;
     };
-  }, [autoRefresh, load]);
+  }, [autoRefresh]);
 
   const filteredLogs = useMemo(() => {
     let result = logs;

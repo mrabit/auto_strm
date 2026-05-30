@@ -9,6 +9,14 @@ export interface LogEntry {
 const MAX_ENTRIES = 1000;
 const buffer: LogEntry[] = [];
 
+type Listener = (entry: LogEntry) => void;
+const listeners = new Set<Listener>();
+
+export function onLog(fn: Listener): () => void {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
 function fmtTime(d: Date): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
@@ -26,6 +34,14 @@ function push(level: LogEntry['level'], args: unknown[]): void {
     .join(' ');
   buffer.push({ timestamp: fmtTime(new Date()), level, message });
   if (buffer.length > MAX_ENTRIES) buffer.splice(0, buffer.length - MAX_ENTRIES);
+  const entry = buffer[buffer.length - 1];
+  for (const fn of listeners) {
+    try {
+      fn(entry);
+    } catch {
+      // failed listener, skip
+    }
+  }
 }
 
 const orig = {
