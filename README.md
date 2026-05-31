@@ -69,18 +69,6 @@ Open http://localhost:5173 — you should see the TODO app.
 3. Update routes in `web/src/App.tsx`
 4. Update sidebar menu in `web/src/App.tsx` (`menuItems`)
 
-### Add a config file
-
-The `config/` directory is mounted in Docker. Add a config file and read it with:
-
-```typescript
-import fs from 'node:fs';
-import path from 'node:path';
-
-const CONFIG_PATH = path.join(__dirname, '..', 'config', 'default.json');
-const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
-```
-
 ### Add a database
 
 Replace the in-memory TODO storage in `src/routes/todo.ts` with your database of choice (SQLite, PostgreSQL, etc.).

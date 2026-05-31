@@ -6,8 +6,6 @@ services:
     environment:
       - WEB_PORT=3000
       - NODE_ENV=production
-    volumes:
-      - ./data:/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
