@@ -1,0 +1,15 @@
+node_modules/
+npm-debug.log*
+.env
+.env.*
+dist/
+.cache/
+config/default.json
+config/dev.json
+web/dist/
+web/node_modules/
+web/tsconfig.tsbuildinfo
+data
+.DS_Store
+.vscode/
+.idea/
