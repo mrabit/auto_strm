@@ -12,7 +12,8 @@
     "format": "prettier --write src/",
     "dev:web": "concurrently -k -n api,ui -c cyan,green \"WEB_PORT=3000 NODE_ENV=development tsx watch src/index.ts\" \"cd web && npx vite\"",
     "build:web": "cd web && npm ci && npm run build",
-    "build:all": "npm run build && npm run build:web"
+    "build:all": "npm run build && npm run build:web",
+    "prepare": "husky"
   },
   "dependencies": {
     "express": "^5.2.1"
@@ -26,6 +27,7 @@
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
+    "husky": "^9.1.7",
     "prettier": "^3.8.3",
     "tsx": "^4.0.0",
     "typescript": "^5.7.0"
