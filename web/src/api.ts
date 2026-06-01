@@ -1,31 +1,34 @@
-import type { Todo, LogEntry } from './types';
+import type { SeriesUpdate, LogEntry } from './types';
 
 async function handleError(res: Response): Promise<never> {
   const body = await res.json().catch(() => ({}));
   throw new Error((body as { error?: string }).error || `HTTP ${res.status}`);
 }
 
-export async function fetchTodos(): Promise<Todo[]> {
-  const res = await fetch('/api/todos');
+export async function fetchSeriesUpdates(search?: string): Promise<SeriesUpdate[]> {
+  const params = search ? `?search=${encodeURIComponent(search)}` : '';
+  const res = await fetch(`/api/seriesupdates${params}`);
   if (!res.ok) return handleError(res);
   return res.json();
 }
 
-export async function createTodo(title: string): Promise<Todo> {
-  const res = await fetch('/api/todos', {
+export async function createSeriesUpdate(
+  data: Omit<SeriesUpdate, 'id' | 'createdAt' | 'updatedAt'>,
+): Promise<SeriesUpdate> {
+  const res = await fetch('/api/seriesupdates', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title }),
+    body: JSON.stringify(data),
   });
   if (!res.ok) return handleError(res);
   return res.json();
 }
 
-export async function updateTodo(
+export async function updateSeriesUpdate(
   id: string,
-  data: { title?: string; done?: boolean },
-): Promise<Todo> {
-  const res = await fetch(`/api/todos/${encodeURIComponent(id)}`, {
+  data: Partial<Omit<SeriesUpdate, 'id' | 'createdAt' | 'updatedAt'>>,
+): Promise<SeriesUpdate> {
+  const res = await fetch(`/api/seriesupdates/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -34,8 +37,8 @@ export async function updateTodo(
   return res.json();
 }
 
-export async function deleteTodo(id: string): Promise<void> {
-  const res = await fetch(`/api/todos/${encodeURIComponent(id)}`, { method: 'DELETE' });
+export async function deleteSeriesUpdate(id: string): Promise<void> {
+  const res = await fetch(`/api/seriesupdates/${encodeURIComponent(id)}`, { method: 'DELETE' });
   if (!res.ok) return handleError(res);
 }
 

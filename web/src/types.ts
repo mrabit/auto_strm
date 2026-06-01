@@ -1,8 +1,11 @@
-export interface Todo {
+export interface SeriesUpdate {
   id: string;
-  title: string;
-  done: boolean;
+  name: string;
+  SERIES_ID: string;
+  SEASON_ID: string;
+  URL: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface LogEntry {

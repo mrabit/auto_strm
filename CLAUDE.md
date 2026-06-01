@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Express + React + Docker project scaffold with a TODO example. Backend runs on Node.js 22 with TypeScript strict mode, frontend uses React 18 with Ant Design 5.
+Express + React + Docker project scaffold with a SeriesUpdate example backed by Strapi CMS. Backend runs on Node.js 22 with TypeScript strict mode, frontend uses React 19 with Ant Design 5.
 
 ## Common Commands
 
@@ -40,7 +40,8 @@ docker compose up --build
 - **Entry**: `src/index.ts` - Starts server, handles graceful shutdown
 - **Server**: `src/server.ts` - Express 5 API with health check, SSE log stream, SPA fallback
 - **Logger**: `src/logger.ts` - Ring buffer (1000 entries) + console capture + SSE streaming
-- **Routes**: `src/routes/todo.ts` - Example CRUD (in-memory storage)
+- **DB**: `src/db.ts` - `require-from-remote` 远程加载 Strapi SDK + SeriesUpdate CRUD helpers
+- **Routes**: `src/routes/seriesupdate.ts` - CRUD (Strapi-backed persistence)
 - **Utils**: `src/utils.ts` - pad / errorMessage 工具函数
 - **Tests**: `src/__tests__/server.test.ts` - Server API tests (Vitest)
 
@@ -65,8 +66,15 @@ docker compose up --build
 
 ### Environment Variables
 
-- `WEB_PORT` (required): Server port (default: 3000)
 - `NODE_ENV`: `development` or `production`
+- `STRAPI_URL`: Strapi instance URL (default: `http://localhost:1337`)
+- `STRAPI_TOKEN`: Strapi API token for authentication
+
+### Strapi Setup
+
+1. 在 Strapi 后台创建 `seriesupdates` collection，字段：`name` (Text, required), `SERIES_ID` (Text), `SEASON_ID` (Text), `URL` (Text)
+2. 在 Settings > API Tokens 创建 token（Read/Update/Create/Delete 权限）
+3. 配置 `.env` 中的 `STRAPI_URL` 和 `STRAPI_TOKEN`
 
 ### Development Notes
 
@@ -81,4 +89,4 @@ docker compose up --build
 - Add routes in `src/routes/` and register in `src/server.ts`
 - Create pages in `web/src/pages/` and update routes in `web/src/App.tsx`
 - Shared components in `web/src/components/`, hooks in `web/src/hooks/`
-- Replace in-memory TODO storage with database in `src/routes/todo.ts`
+- Strapi CRUD helpers in `src/db.ts`，参考 `getSeriesUpdates` / `createSeriesUpdate` 模式扩展新 collection

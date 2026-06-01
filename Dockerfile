@@ -17,9 +17,12 @@ RUN npm run build
 
 # stage 3: run
 FROM node:22-alpine
+
+ENV NODE_ENV=production
+
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --production
+RUN npm ci --omit=dev --ignore-scripts
 COPY --from=builder-backend /app/dist/ ./dist/
 COPY --from=builder-web /app/web/dist/ ./web/dist/
 EXPOSE 3000

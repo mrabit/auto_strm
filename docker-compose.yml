@@ -2,10 +2,12 @@ services:
   app:
     build: .
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      - "3000:3000"
+    env_file:
+      - .env
     environment:
-      - WEB_PORT=3000
       - NODE_ENV=production
+      - TZ
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]

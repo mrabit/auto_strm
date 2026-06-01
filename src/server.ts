@@ -3,14 +3,14 @@ import express from 'express';
 import type { Server } from 'node:http';
 import type { Socket } from 'node:net';
 import { getLogs, onLog } from './logger';
-import todoRouter from './routes/todo';
+import seriesUpdateRouter from './routes/seriesupdate';
 
 export function startServer(port: number): Promise<{ server: Server; close: () => void }> {
   const app = express();
   app.use(express.json({ limit: '1mb' }));
 
   // Business routes
-  app.use(todoRouter);
+  app.use(seriesUpdateRouter);
 
   // Health check
   app.get('/api/health', (_req, res) => {

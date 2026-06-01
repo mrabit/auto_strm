@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import './logger';
 import { startServer } from './server';
 import { errorMessage } from './utils';
@@ -14,14 +15,10 @@ process.on('unhandledRejection', (reason) => {
   );
 });
 
-const webPort = parseInt(process.env.WEB_PORT || '3000', 10);
-if (isNaN(webPort) || webPort <= 0) {
-  console.error('WEB_PORT 必须设置为正整数');
-  process.exit(1);
-}
+const PORT = 3000;
 
 async function main() {
-  const { server, close } = await startServer(webPort);
+  const { server, close } = await startServer(PORT);
 
   let shuttingDown = false;
 
