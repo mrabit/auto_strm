@@ -5,6 +5,8 @@ import { subscribeLogs } from '../api';
 import ansiToHtml from '../utils/ansiToHtml';
 import type { LogEntry } from '../types';
 
+const MAX_LOGS = 5000;
+
 export default function LogViewerPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -20,7 +22,10 @@ export default function LogViewerPage() {
       return;
     }
     unsubRef.current = subscribeLogs((entry) => {
-      setLogs((prev) => [...prev, entry]);
+      setLogs((prev) => {
+        const next = [...prev, entry];
+        return next.length > MAX_LOGS ? next.slice(-MAX_LOGS) : next;
+      });
     });
     return () => {
       unsubRef.current?.();

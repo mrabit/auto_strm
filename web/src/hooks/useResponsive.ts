@@ -9,10 +9,9 @@ export default function useResponsive() {
   const [bp, setBp] = useState(getBreakpoint);
 
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
     const handler = () => setBp(getBreakpoint());
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
   }, []);
 
   return bp;
