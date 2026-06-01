@@ -6,11 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Dockerized TypeScript app that syncs media metadata from WebDAV and generates `.strm` files for video files. Runs on a cron schedule. Supports multiple sync tasks with independent configs. Includes an optional web UI (React + Ant Design) for browser-based config management.
 
+## Template source
+
+本项目基于 `/Users/yuany/workspace/docker/node-react-template` 模板创建，当前同步版本：template@1.4.0。模板有更新时，直接对比该目录进行同步。**同步必须逐文件核对，不能遗漏任何基础设施配置；删除文件前必须确认目标配置已完整覆盖其功能。**
+
 ## Commands
 
 ```bash
 # Install dependencies + git hook
-npm install && cp .git/hooks/pre-commit .git/hooks/pre-commit
+npm install
 
 # Dev mode (backend only, auto-reload, reads config/dev.json, web server on :3000)
 npm run dev
@@ -32,6 +36,9 @@ npm run build:all
 
 # Run compiled output
 npm start
+
+# Run tests
+npm test
 
 # Docker
 docker compose up --build
@@ -278,8 +285,8 @@ npx prettier --write src/config.ts src/jellyfin.ts  # auto-fix formatting
 - `webdav` (v5) — WebDAV client: `createClient`, `getDirectoryContents`, `createReadStream`
 - `cron` (v3) — `CronJob` for scheduling
 - `express` (v5) — HTTP server for web UI and REST API
-- `react` + `antd` (v5) — web UI (in `web/`)
-- `vite` (v5) — frontend build tool
+- `react` + `antd` (v6) — web UI (in `web/`)
+- `vite` (v6) — frontend build tool
 - `tsx` — TypeScript runner for dev mode
 
 ## File classification

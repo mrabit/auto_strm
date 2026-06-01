@@ -12,7 +12,14 @@ export default function SystemSettingsPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 24,
+        }}
+      >
         <div>
           <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600 }}>系统设置</h2>
           <p style={{ color: '#666', margin: '4px 0 0' }}>全局默认配置，应用于所有任务。</p>

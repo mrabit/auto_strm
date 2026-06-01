@@ -26,7 +26,9 @@ export default function Sidebar({ collapsed, onCollapse }: Props) {
   const location = useLocation();
   const { isMobile } = useResponsive();
 
-  const selectedKey = menuItems.find((item) => item.key !== '/' && location.pathname.startsWith(item.key))?.key || '/';
+  const selectedKey =
+    menuItems.find((item) => item.key !== '/' && location.pathname.startsWith(item.key))?.key ||
+    '/';
 
   return (
     <>

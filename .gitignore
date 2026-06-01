@@ -1,16 +1,41 @@
+# Dependencies
 node_modules/
-npm-debug.log*
-.env
-.env.*
+
+# Build outputs
 dist/
-.cache/
-config/default.json
-config/dev.json
 web/dist/
 web/node_modules/
 web/tsconfig.tsbuildinfo
-data
-.DS_Store
+
+# Environment files
+.env
+.env.*
+
+# Config (volume-mounted)
+config/default.json
+config/dev.json
+
+# Data
+data/
+
+# Cache
+.cache/
+
+# IDE
 .vscode/
 .idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Docker
+docker-compose.override.yml
+
+# Claude
+.claude/
 .superpowers

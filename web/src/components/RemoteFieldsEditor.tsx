@@ -10,7 +10,13 @@ interface Props {
   hidePath?: boolean;
 }
 
-export default function RemoteFieldsEditor({ value = {}, defaults, onChange, showRequired, hidePath }: Props) {
+export default function RemoteFieldsEditor({
+  value = {},
+  defaults,
+  onChange,
+  showRequired,
+  hidePath,
+}: Props) {
   function update<K extends keyof RemoteConfig>(key: K, val: RemoteConfig[K]) {
     onChange?.({ ...value, [key]: val === '' ? undefined : val });
   }

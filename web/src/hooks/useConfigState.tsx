@@ -1,4 +1,12 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  type ReactNode,
+} from 'react';
 import { message } from 'antd';
 import { fetchConfig, saveConfig } from '../api';
 import type { ConfigFile } from '../types';
@@ -72,29 +80,26 @@ export function ConfigStateProvider({ children }: { children: ReactNode }) {
     }
   }, [dirty, load]);
 
-  const toggleEnabled = useCallback(
-    async (index: number, enabled: boolean) => {
-      const saved = savedConfigRef.current;
-      if (!saved) return;
-      const tasks = saved.tasks.map((t, i) => (i === index ? { ...t, enabled } : t));
-      const toSave = { ...saved, tasks };
-      try {
-        await saveConfig(toSave);
-        const fresh = await fetchConfig();
-        savedConfigRef.current = fresh;
-        setConfig((prev) => {
-          if (!prev) return prev;
-          const updated = prev.tasks.map((t, i) =>
-            i === index ? { ...t, enabled: fresh.tasks[i]?.enabled ?? enabled } : t,
-          );
-          return { ...prev, tasks: updated };
-        });
-      } catch (err) {
-        message.error('Failed to save: ' + (err instanceof Error ? err.message : String(err)));
-      }
-    },
-    [],
-  );
+  const toggleEnabled = useCallback(async (index: number, enabled: boolean) => {
+    const saved = savedConfigRef.current;
+    if (!saved) return;
+    const tasks = saved.tasks.map((t, i) => (i === index ? { ...t, enabled } : t));
+    const toSave = { ...saved, tasks };
+    try {
+      await saveConfig(toSave);
+      const fresh = await fetchConfig();
+      savedConfigRef.current = fresh;
+      setConfig((prev) => {
+        if (!prev) return prev;
+        const updated = prev.tasks.map((t, i) =>
+          i === index ? { ...t, enabled: fresh.tasks[i]?.enabled ?? enabled } : t,
+        );
+        return { ...prev, tasks: updated };
+      });
+    } catch (err) {
+      message.error('Failed to save: ' + (err instanceof Error ? err.message : String(err)));
+    }
+  }, []);
 
   const update = useCallback((patch: Partial<ConfigFile>) => {
     setConfig((prev) => {
@@ -107,7 +112,9 @@ export function ConfigStateProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ConfigStateContext.Provider value={{ config, loading, dirty, saving, update, toggleEnabled, save, reload: load }}>
+    <ConfigStateContext.Provider
+      value={{ config, loading, dirty, saving, update, toggleEnabled, save, reload: load }}
+    >
       {children}
     </ConfigStateContext.Provider>
   );

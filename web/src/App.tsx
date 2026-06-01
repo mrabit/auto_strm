@@ -10,7 +10,9 @@ const SystemSettingsPage = React.lazy(() => import('./pages/SystemSettingsPage')
 
 function PageLoader() {
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+    <div
+      style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}
+    >
       <Spin size="large" />
     </div>
   );

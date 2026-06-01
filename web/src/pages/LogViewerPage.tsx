@@ -53,7 +53,14 @@ export default function LogViewerPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 16,
+        }}
+      >
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600 }}>日志查看</h2>
         <Space>
           <Switch

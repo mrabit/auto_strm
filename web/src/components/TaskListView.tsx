@@ -29,7 +29,9 @@ export default function TaskListView({
           onDelete={() => onDelete(i)}
           onToggleEnabled={(enabled) => onToggleEnabled(i, enabled)}
           onSync={() => onSync(task.key!)}
-          lastSyncTime={task.key && lastSyncTimes?.[task.key] ? new Date(lastSyncTimes[task.key]) : undefined}
+          lastSyncTime={
+            task.key && lastSyncTimes?.[task.key] ? new Date(lastSyncTimes[task.key]) : undefined
+          }
         />
       ))}
     </div>

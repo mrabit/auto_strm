@@ -1,8 +1,5 @@
 import React, { useMemo } from 'react';
-import {
-  UnorderedListOutlined,
-  CheckCircleOutlined,
-} from '@ant-design/icons';
+import { UnorderedListOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import StatsCard from './StatsCard';
 import useResponsive from '../hooks/useResponsive';
 
@@ -20,8 +17,18 @@ const StatsDashboard = React.memo(function StatsDashboard({ stats }: Props) {
 
   const items = useMemo(
     () => [
-      { title: '任务总数', value: stats.total, icon: <UnorderedListOutlined />, gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { title: '已启用', value: stats.enabled, icon: <CheckCircleOutlined />, gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+      {
+        title: '任务总数',
+        value: stats.total,
+        icon: <UnorderedListOutlined />,
+        gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      },
+      {
+        title: '已启用',
+        value: stats.enabled,
+        icon: <CheckCircleOutlined />,
+        gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+      },
     ],
     [stats],
   );

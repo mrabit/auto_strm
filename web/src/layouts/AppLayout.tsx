@@ -29,7 +29,9 @@ export default function AppLayout() {
         />
       )}
       <Sidebar collapsed={collapsed} onCollapse={setCollapsed} />
-      <Layout style={{ marginLeft: isMobile ? 0 : collapsed ? 80 : 220, transition: 'margin-left 0.2s' }}>
+      <Layout
+        style={{ marginLeft: isMobile ? 0 : collapsed ? 80 : 220, transition: 'margin-left 0.2s' }}
+      >
         <Content
           style={{
             padding: 24,
