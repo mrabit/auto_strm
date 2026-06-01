@@ -100,6 +100,7 @@ docker compose up --build
 
 ### Changelog
 
+- **1.5.0** - 添加模板管理 CLI 工具 `bin/node-react-template.sh`（create/init/sync），支持从模板创建项目、添加 template remote、拉取模板更新；`.gitignore` 增加 `docs`
 - **1.4.0** - 同步 package-lock.json 依赖锁版本
 - **1.3.0** - Dockerfile 增加 HEALTHCHECK 并优化构建层缓存，pre-commit 改用 lint-staged 加速，check 脚本改为 `tsc --noEmit`，`.gitignore` 重组，升级 strapi-sdk-js v3、vitest v4、web devDependencies
 - **1.2.0** - 统一 ESLint 配置：根目录 eslint.config.mjs 同时覆盖 `src/` 和 `web/src/`，移除 web/ 独立 eslint 依赖和配置，升级 eslint-plugin-react-hooks v5→v7、eslint-plugin-react-refresh v0.4→v0.5，修复 react-hooks/set-state-in-effect 规则问题
