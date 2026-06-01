@@ -7,7 +7,6 @@ docs/
 # Build outputs
 dist/
 web/dist/
-web/tsconfig.tsbuildinfo
 
 # Environment files
 .env

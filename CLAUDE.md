@@ -84,29 +84,6 @@ docker compose up --build
 - TypeScript strict mode enabled in `tsconfig.json`
 - Vitest for testing, test files in `src/__tests__/`
 
-## Versioning
-
-- 遵循 SemVer：MAJOR.MINOR.PATCH
-- **每次提交变更时，必须同步更新 `package.json` 和 `web/package.json` 中的版本号**（两个包保持一致）
-- 更新版本号后，在下方 Changelog 补充对应条目
-
-### 模板同步
-
-基于此模板的派生项目应同步所有模板更新。派生项目初始化完成后，需在 CLAUDE.md 中记录模板来源和版本，例如：
-
-> 本项目基于 `/Users/yuany/workspace/docker/node-react-template` 模板创建，当前同步版本：template@1.4.0。模板有更新时，直接对比该目录进行同步。
-
-**同步规则：必须逐文件核对，不能遗漏任何基础设施配置；删除文件前必须确认目标配置已完整覆盖其功能。**
-
-### Changelog
-
-- **1.5.0** - 添加模板管理 CLI 工具 `bin/node-react-template.sh`（create/init/sync），支持从模板创建项目、添加 template remote、拉取模板更新；`.gitignore` 增加 `docs`
-- **1.4.0** - 同步 package-lock.json 依赖锁版本
-- **1.3.0** - Dockerfile 增加 HEALTHCHECK 并优化构建层缓存，pre-commit 改用 lint-staged 加速，check 脚本改为 `tsc --noEmit`，`.gitignore` 重组，升级 strapi-sdk-js v3、vitest v4、web devDependencies
-- **1.2.0** - 统一 ESLint 配置：根目录 eslint.config.mjs 同时覆盖 `src/` 和 `web/src/`，移除 web/ 独立 eslint 依赖和配置，升级 eslint-plugin-react-hooks v5→v7、eslint-plugin-react-refresh v0.4→v0.5，修复 react-hooks/set-state-in-effect 规则问题
-- **1.1.0** - 替换 TODO 示例为 Strapi 后端的 SeriesUpdate CRUD
-- **1.0.0** - 初始版本：Express + React + Docker 项目模板
-
 ## Customization
 
 - Add routes in `src/routes/` and register in `src/server.ts`
