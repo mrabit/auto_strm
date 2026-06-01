@@ -25,7 +25,7 @@ Open http://localhost:5173 — you should see the TODO app.
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Backend only (auto-reload, reads WEB_PORT) |
+| `npm run dev` | Backend only (auto-reload) |
 | `npm run dev:web` | Backend + frontend (HMR, proxy on :5173) |
 | `npm run build` | Compile backend TypeScript |
 | `npm run build:web` | Build frontend (Vite) |
