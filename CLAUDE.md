@@ -25,6 +25,10 @@ npm run check          # Lint + type-check
 npm run lint           # ESLint only
 npm run format         # Prettier
 
+# Test
+npm run test           # Vitest (single run)
+npm run test:watch     # Vitest (watch mode)
+
 # Docker
 docker compose up --build
 ```
@@ -37,13 +41,21 @@ docker compose up --build
 - **Server**: `src/server.ts` - Express 5 API with health check, SSE log stream, SPA fallback
 - **Logger**: `src/logger.ts` - Ring buffer (1000 entries) + console capture + SSE streaming
 - **Routes**: `src/routes/todo.ts` - Example CRUD (in-memory storage)
+- **Utils**: `src/utils.ts` - pad / errorMessage 工具函数
+- **Tests**: `src/__tests__/server.test.ts` - Server API tests (Vitest)
 
 ### Frontend (`web/src/`)
 
 - **Entry**: `web/src/main.tsx` - React root with BrowserRouter, Ant Design ConfigProvider
 - **Routes**: `web/src/App.tsx` - Lazy-loaded pages with menu items
 - **API Client**: `web/src/api.ts` - REST client + SSE log subscription
+- **Types**: `web/src/types.ts` - 共享类型定义
 - **Layouts**: `web/src/layouts/AppLayout.tsx` - Responsive shell with sidebar
+- **Components**:
+  - `web/src/components/ErrorBoundary.tsx` - 全局错误边界
+  - `web/src/components/Sidebar.tsx` - 侧边栏
+- **Hooks**: `web/src/hooks/useResponsive.ts` - 响应式断点 hook
+- **Utils**: `web/src/utils/ansiToHtml.ts` - ANSI 转 HTML
 
 ### Key Patterns
 
@@ -62,9 +74,11 @@ docker compose up --build
 - Backend uses `tsx watch` for auto-reload during development
 - ESLint flat config with Prettier integration in `eslint.config.mjs`
 - TypeScript strict mode enabled in `tsconfig.json`
+- Vitest for testing, test files in `src/__tests__/`
 
 ## Customization
 
 - Add routes in `src/routes/` and register in `src/server.ts`
 - Create pages in `web/src/pages/` and update routes in `web/src/App.tsx`
+- Shared components in `web/src/components/`, hooks in `web/src/hooks/`
 - Replace in-memory TODO storage with database in `src/routes/todo.ts`
