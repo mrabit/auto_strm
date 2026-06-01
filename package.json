@@ -1,6 +1,6 @@
 {
   "name": "node-react-template",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Express + React + Docker project template with Strapi CMS integration",
   "main": "src/index.ts",
   "scripts": {
