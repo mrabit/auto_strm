@@ -79,9 +79,7 @@ export default function Sidebar({ collapsed, onCollapse, menuItems, brand }: Pro
             overflow: 'hidden',
           }}
         >
-          {brand || (
-            <AppstoreOutlined style={{ fontSize: 24, marginRight: collapsed ? 0 : 10 }} />
-          )}
+          {brand || <AppstoreOutlined style={{ fontSize: 24, marginRight: collapsed ? 0 : 10 }} />}
           {!collapsed && !brand && 'Template'}
         </div>
         <Menu

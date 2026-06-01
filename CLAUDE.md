@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Express + React + Docker project scaffold with a SeriesUpdate example backed by Strapi CMS. Backend runs on Node.js 22 with TypeScript strict mode, frontend uses React 19 with Ant Design 5.
+Express + React + Docker project scaffold with a SeriesUpdate example backed by Strapi CMS. Backend runs on Node.js 22 with TypeScript strict mode, frontend uses React 19 with Ant Design 6.
 
 ## Common Commands
 
@@ -80,9 +80,21 @@ docker compose up --build
 
 - Frontend runs on Vite (port 5173) with API proxy to backend (port 3000)
 - Backend uses `tsx watch` for auto-reload during development
-- ESLint flat config with Prettier integration in `eslint.config.mjs`
+- ESLint flat config with Prettier integration in `eslint.config.mjs`（根目录统一管理，web/ 不再有独立 eslint 配置）
 - TypeScript strict mode enabled in `tsconfig.json`
 - Vitest for testing, test files in `src/__tests__/`
+
+## Versioning
+
+- 遵循 SemVer：MAJOR.MINOR.PATCH
+- **每次提交变更时，必须同步更新 `package.json` 和 `web/package.json` 中的版本号**（两个包保持一致）
+- 更新版本号后，在下方 Changelog 补充对应条目
+
+### Changelog
+
+- **1.2.0** - 统一 ESLint 配置：根目录 eslint.config.mjs 同时覆盖 `src/` 和 `web/src/`，移除 web/ 独立 eslint 依赖和配置，升级 eslint-plugin-react-hooks v5→v7、eslint-plugin-react-refresh v0.4→v0.5，修复 react-hooks/set-state-in-effect 规则问题
+- **1.1.0** - 替换 TODO 示例为 Strapi 后端的 SeriesUpdate CRUD
+- **1.0.0** - 初始版本：Express + React + Docker 项目模板
 
 ## Customization
 

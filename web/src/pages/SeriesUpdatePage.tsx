@@ -105,7 +105,14 @@ export default function SeriesUpdatePage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 16,
+        }}
+      >
         <h2 style={{ fontSize: 22, fontWeight: 600, margin: 0 }}>剧集更新</h2>
         <Space>
           <Input.Search
