@@ -22,8 +22,8 @@ function PageLoader() {
 }
 
 const menuItems: MenuItem[] = [
-  { key: '/', icon: <UnorderedListOutlined />, label: <Link to="/">Todos</Link> },
-  { key: '/logs', icon: <FileTextOutlined />, label: <Link to="/logs">Logs</Link> },
+  { key: '/', icon: <UnorderedListOutlined />, label: <Link to="/">待办事项</Link> },
+  { key: '/logs', icon: <FileTextOutlined />, label: <Link to="/logs">日志</Link> },
 ];
 
 export default function App() {

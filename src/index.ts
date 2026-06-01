@@ -14,9 +14,9 @@ process.on('unhandledRejection', (reason) => {
   );
 });
 
-const webPort = parseInt(process.env.WEB_PORT || '', 10);
-if (webPort <= 0) {
-  console.error('WEB_PORT must be set to a positive number');
+const webPort = parseInt(process.env.WEB_PORT || '3000', 10);
+if (isNaN(webPort) || webPort <= 0) {
+  console.error('WEB_PORT 必须设置为正整数');
   process.exit(1);
 }
 
@@ -28,23 +28,23 @@ async function main() {
   function shutdown(signal: string) {
     if (shuttingDown) return;
     shuttingDown = true;
-    console.log(`\nreceived ${signal}, shutting down...`);
+    console.log(`\n收到 ${signal}，正在关闭...`);
 
     close();
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('dev mode, exiting immediately');
+      console.log('开发模式，立即退出');
       setTimeout(() => process.exit(0), 100);
       return;
     }
 
     setTimeout(() => {
-      console.log('shutdown timeout — force exit');
+      console.log('关闭超时 — 强制退出');
       process.exit(1);
     }, 5_000);
 
     server.on('close', () => {
-      console.log('server closed, exiting');
+      console.log('服务器已关闭，退出');
       process.exit(0);
     });
   }
@@ -54,6 +54,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('failed to start:', errorMessage(err));
+  console.error('启动失败:', errorMessage(err));
   process.exit(1);
 });

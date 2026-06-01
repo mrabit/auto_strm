@@ -16,7 +16,7 @@ export default function TodoPage() {
       const data = await fetchTodos();
       setTodos(data);
     } catch {
-      message.error('Failed to load todos');
+      message.error('加载待办事项失败');
     }
   }, []);
 
@@ -32,7 +32,7 @@ export default function TodoPage() {
       setNewTitle('');
       await loadTodos();
     } catch {
-      message.error('Failed to create todo');
+      message.error('创建待办事项失败');
     } finally {
       setLoading(false);
     }
@@ -43,7 +43,7 @@ export default function TodoPage() {
       await updateTodo(todo.id, { done: !todo.done });
       await loadTodos();
     } catch {
-      message.error('Failed to update todo');
+      message.error('更新待办事项失败');
     }
   };
 
@@ -52,17 +52,17 @@ export default function TodoPage() {
       await deleteTodo(id);
       await loadTodos();
     } catch {
-      message.error('Failed to delete todo');
+      message.error('删除待办事项失败');
     }
   };
 
   return (
     <div>
-      <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 16 }}>TODO Example</h2>
+      <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 16 }}>待办事项示例</h2>
 
       <Space.Compact style={{ width: '100%', marginBottom: 24 }}>
         <Input
-          placeholder="Add a new todo..."
+          placeholder="添加新的待办事项..."
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           onPressEnter={handleAdd}
@@ -75,19 +75,19 @@ export default function TodoPage() {
           loading={loading}
           size="large"
         >
-          Add
+          添加
         </Button>
       </Space.Compact>
 
       <List
         dataSource={todos}
-        locale={{ emptyText: 'No todos yet' }}
+        locale={{ emptyText: '暂无待办事项' }}
         renderItem={(todo) => (
           <List.Item
             actions={[
               <Popconfirm
                 key="delete"
-                title="Delete this todo?"
+                title="确认删除此待办事项？"
                 onConfirm={() => handleDelete(todo.id)}
               >
                 <Button type="text" danger icon={<DeleteOutlined />} />

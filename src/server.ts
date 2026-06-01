@@ -56,7 +56,7 @@ export function startServer(port: number): Promise<{ server: Server; close: () =
         conn.on('close', () => connections.delete(conn));
       });
 
-      console.log(`server listening on http://localhost:${port}`);
+      console.log(`服务器监听 http://localhost:${port}`);
       resolve({
         server,
         close: () => {

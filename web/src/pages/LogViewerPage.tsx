@@ -2,8 +2,16 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Button, Radio, Input, Space, Switch } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
 import { subscribeLogs } from '../api';
-import ansiToHtml from '../utils/ansiToHtml';
+import stripAnsi from '../utils/ansiToHtml';
 import type { LogEntry } from '../types';
+
+const MAX_LOGS = 5000;
+
+const LEVEL_COLORS: Record<string, string> = {
+  error: '#ff4d4f',
+  warn: '#faad14',
+  info: '#e0e0e0',
+};
 
 export default function LogViewerPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -19,7 +27,10 @@ export default function LogViewerPage() {
       return;
     }
     unsubRef.current = subscribeLogs((entry) => {
-      setLogs((prev) => [...prev, entry]);
+      setLogs((prev) => {
+        const next = [...prev, entry];
+        return next.length > MAX_LOGS ? next.slice(-MAX_LOGS) : next;
+      });
     });
     return () => {
       unsubRef.current?.();
@@ -60,30 +71,30 @@ export default function LogViewerPage() {
           marginBottom: 16,
         }}
       >
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600 }}>Log Viewer</h2>
+        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600 }}>日志查看器</h2>
         <Space>
           <Switch
             checked={autoRefresh}
             onChange={setAutoRefresh}
-            checkedChildren="Auto"
-            unCheckedChildren="Manual"
+            checkedChildren="自动"
+            unCheckedChildren="手动"
           />
-          <Button onClick={() => setLogs([])}>Clear</Button>
+          <Button onClick={() => setLogs([])}>清空</Button>
           <Button icon={<DownloadOutlined />} onClick={handleExport}>
-            Export
+            导出
           </Button>
         </Space>
       </div>
 
       <Space style={{ marginBottom: 16 }} wrap>
         <Radio.Group value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)}>
-          <Radio.Button value="all">All</Radio.Button>
-          <Radio.Button value="error">Error</Radio.Button>
-          <Radio.Button value="warn">Warn</Radio.Button>
-          <Radio.Button value="info">Info</Radio.Button>
+          <Radio.Button value="all">全部</Radio.Button>
+          <Radio.Button value="error">错误</Radio.Button>
+          <Radio.Button value="warn">警告</Radio.Button>
+          <Radio.Button value="info">信息</Radio.Button>
         </Radio.Group>
         <Input.Search
-          placeholder="Search logs..."
+          placeholder="搜索日志..."
           onSearch={setSearchQuery}
           allowClear
           style={{ width: 260 }}
@@ -106,12 +117,14 @@ export default function LogViewerPage() {
         }}
       >
         {filteredLogs.length === 0 ? (
-          <span style={{ color: '#666' }}>No logs yet</span>
+          <span style={{ color: '#666' }}>暂无日志</span>
         ) : (
           filteredLogs.map((entry, i) => (
             <div key={`${entry.timestamp}-${i}`}>
               <span style={{ color: '#666', marginRight: 8 }}>{entry.timestamp}</span>
-              <span dangerouslySetInnerHTML={{ __html: ansiToHtml(entry.message) }} />
+              <span style={{ color: LEVEL_COLORS[entry.level] || '#e0e0e0' }}>
+                {stripAnsi(entry.message)}
+              </span>
             </div>
           ))
         )}

@@ -4,7 +4,7 @@ import prettier from 'eslint-plugin-prettier';
 
 export default [
   {
-    ignores: ['dist/', 'node_modules/', 'data/', 'web/dist/', 'web/node_modules/'],
+    ignores: ['dist/', 'node_modules/', 'web/dist/', 'web/node_modules/'],
   },
   {
     files: ['src/**/*.ts'],
