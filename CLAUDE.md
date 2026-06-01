@@ -90,6 +90,14 @@ docker compose up --build
 - **每次提交变更时，必须同步更新 `package.json` 和 `web/package.json` 中的版本号**（两个包保持一致）
 - 更新版本号后，在下方 Changelog 补充对应条目
 
+### 模板同步
+
+基于此模板的派生项目应同步所有模板更新。派生项目初始化完成后，需在 CLAUDE.md 中记录模板来源和版本，例如：
+
+> 本项目基于 `/Users/yuany/workspace/docker/node-react-template` 模板创建，当前同步版本：template@1.2.0。模板有更新时，直接对比该目录进行同步。
+
+**同步规则：必须逐文件核对，不能遗漏任何基础设施配置；删除文件前必须确认目标配置已完整覆盖其功能。**
+
 ### Changelog
 
 - **1.2.0** - 统一 ESLint 配置：根目录 eslint.config.mjs 同时覆盖 `src/` 和 `web/src/`，移除 web/ 独立 eslint 依赖和配置，升级 eslint-plugin-react-hooks v5→v7、eslint-plugin-react-refresh v0.4→v0.5，修复 react-hooks/set-state-in-effect 规则问题
