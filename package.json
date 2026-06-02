@@ -1,6 +1,6 @@
 {
   "name": "auto_strm",
-  "version": "1.0.0",
+  "version": "1.6.0",
   "description": "Sync media metadata from WebDAV and generate .strm links for video files",
   "main": "src/index.ts",
   "scripts": {
