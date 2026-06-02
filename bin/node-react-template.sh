@@ -25,7 +25,6 @@ Usage: node-react-template <command> [options]
 Commands:
   create <name>   从模板创建新项目
   init            给已有项目添加 template remote
-  sync            从模板拉取更新
 
 Create options:
   --repo <url>    从 Git 仓库拉取模板（默认用本地目录）
@@ -34,8 +33,7 @@ Create options:
 Init options:
   --repo <url>    模板仓库地址（默认用本地目录）
 
-Sync options:
-  --branch <name> 模板分支名（默认 master）
+同步模板更新: 在 Claude Code 中运行 /template-sync 获得智能冲突处理和自动清理。
 EOF
   exit 0
 }
@@ -85,7 +83,15 @@ cmd_create() {
   (cd "$name" && git remote add template "$remote_url")
   ok "已添加 template remote: $remote_url"
 
-  # 5) npm install
+  # 5) 安装 Claude Code skill
+  if [[ -d "$TEMPLATE_DIR/.claude/skills" ]]; then
+    mkdir -p "$name/.claude/skills"
+    cp -r "$TEMPLATE_DIR/.claude/skills/." "$name/.claude/skills/"
+    (cd "$name" && git add .claude/skills/ 2>/dev/null && git commit -q --no-verify -m "chore: 安装 template-sync skill" 2>/dev/null || true)
+    ok "已安装 Claude Code skill: /template-sync"
+  fi
+
+  # 6) npm install
   if [[ "$skip_install" == false ]]; then
     info "安装依赖..."
     (cd "$name" && npm install --silent)
@@ -98,7 +104,7 @@ cmd_create() {
   echo "  cd $name"
   echo "  npm run dev:web"
   echo ""
-  echo "  同步模板更新: node-react-template sync"
+  echo "  同步模板更新: /template-sync"
 }
 
 # ─── init ────────────────────────────────────────────
@@ -130,53 +136,18 @@ cmd_init() {
   local remote_url="${repo:-$TEMPLATE_DIR}"
   git remote add template "$remote_url"
   ok "已添加 template remote: $remote_url"
-  echo ""
-  echo "  同步模板更新: node-react-template sync"
-}
 
-# ─── sync ────────────────────────────────────────────
-cmd_sync() {
-  local branch="master"
-
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      --branch) [[ -n "${2:-}" ]] || die "--branch 需要一个参数"; branch="$2"; shift 2 ;;
-      -*)       die "未知选项: $1" ;;
-      *)        shift ;;
-    esac
-  done
-
-  # 检查 template remote
-  local remote_url
-  remote_url=$(git remote get-url template 2>/dev/null) || die "当前目录没有 template remote，请先用 create 命令创建项目"
-
-  info "从 $remote_url 拉取更新 (branch: $branch)..."
-  git fetch template "$branch" || die "fetch 失败"
-
-  info "合并 template/$branch..."
-  if git merge "template/$branch" --no-edit --allow-unrelated-histories; then
-    # 移除模板专属的 bin 字段（create 时已排除，sync 需清理）
-    local cleaned=false
-    if [[ -d bin ]]; then
-      rm -rf bin
-      git add bin 2>/dev/null || true
-      info "已移除模板 bin/ 目录"
-      cleaned=true
-    fi
-    if [[ -f package.json ]] && grep -q '"bin"' package.json; then
-      sed -i.bak '/"bin": {/,/}/d' package.json && rm package.json.bak
-      git add package.json
-      info "已移除 package.json 中的 bin 字段"
-      cleaned=true
-    fi
-    if [[ "$cleaned" == true ]]; then
-      git commit --no-verify -q -m "chore: 移除模板专属的 bin 配置"
-    fi
-    ok "同步完成！"
-  else
-    warn "合并冲突，请手动解决后 git add + git commit"
-    exit 1
+  # 安装 Claude Code skill
+  if [[ -d "$TEMPLATE_DIR/.claude/skills" ]]; then
+    mkdir -p .claude/skills
+    cp -r "$TEMPLATE_DIR/.claude/skills/." .claude/skills/
+    git add .claude/skills/ 2>/dev/null || true
+    git commit -q --no-verify -m "chore: 安装 template-sync skill" 2>/dev/null || true
+    ok "已安装 Claude Code skill: /template-sync"
   fi
+
+  echo ""
+  echo "  同步模板更新: /template-sync"
 }
 
 # ─── 入口 ────────────────────────────────────────────
@@ -185,7 +156,6 @@ cmd_sync() {
 case "${1:-}" in
   create) shift; cmd_create "$@" ;;
   init)   shift; cmd_init "$@" ;;
-  sync)   shift; cmd_sync "$@" ;;
   -h|--help|help) usage ;;
   *)      die "未知命令: $1（运行 --help 查看用法）" ;;
 esac
