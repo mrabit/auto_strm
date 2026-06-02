@@ -1,6 +1,6 @@
 {
   "name": "node-react-template",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Express + React + Docker project template with Strapi CMS integration",
   "bin": {
     "node-react-template": "bin/node-react-template.sh"

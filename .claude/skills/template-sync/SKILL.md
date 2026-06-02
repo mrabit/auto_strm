@@ -32,9 +32,10 @@ description: Use when working in a project created from node-react-template and 
 5. 若无新增 commit，提示「已是最新」并退出
 6. 询问用户是否继续合并
 
-### Phase 3 — Squash Merge
+### Phase 3 — Merge
 
-1. 执行 `git merge template/master --squash --allow-unrelated-histories`
+1. 执行 `git merge template/master --allow-unrelated-histories`（普通 merge，非 squash）
+   > **为什么不用 `--squash`**：squash merge 不产生 merge commit，merge-base 不更新，导致每次同步都会重复出现已解决的冲突。普通 merge 记录 parent 关系，后续同步只需处理新变更的冲突。
 2. 无冲突 → 直接进入 Phase 4
 3. 有冲突 → 对每个冲突文件，根据冲突类型分别处理：
 
