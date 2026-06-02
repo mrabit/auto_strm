@@ -20,14 +20,11 @@ description: Use when working in a project created from node-react-template and 
 ### Phase 2 — Fetch & Analyze
 
 1. `git fetch template master` 拉取模板最新代码
-2. **确定上次同步点**（按优先级）：
-   - 读取 `.template-sync` 文件中的 `last_synced_commit` 字段
-   - 若文件不存在，解析本地 sync commit message（`git log --grep="sync template" --format="%s" -1`）提取版本号，再通过 `git log template/master --grep="<version>" --format="%H" -1` 找到对应 commit
-   - 若都找不到，用 `HEAD`（退化为原始行为）并提示用户
-3. 以上次同步点为基准，展示增量 commit log：
-   `git log <last_synced_commit>..template/master --oneline --no-merges`
+2. **确定上次同步点**：`git merge-base HEAD template/master` 获取 merge-base 作为基准
+3. 以 merge-base 为基准，展示增量 commit log：
+   `git log <merge-base>..template/master --oneline --no-merges`
 4. 按类型分组展示变更文件：
-   - `git diff --name-status <last_synced_commit>...template/master` 获取文件列表
+   - `git diff --name-status <merge-base>...template/master` 获取文件列表
    - 分为 Added / Modified / Deleted 三组
 5. 若无新增 commit，提示「已是最新」并退出
 6. 询问用户是否继续合并
@@ -64,6 +61,8 @@ description: Use when working in a project created from node-react-template and 
 | 模板带来的 `docs/` | `git diff --name-only HEAD template/master -- 'docs/'` | 仅删除 diff 中列出的文件 |
 | 模板带来的 `.claude/` 文件 | `git diff --name-only HEAD template/master -- '.claude/'` | **区分通用功能和模板专属配置**：通用功能（如 skills、commands）保留；模板专属配置（如模板项目的 settings、hooks）删除 |
 | CLAUDE.md 模板段 | 匹配 `### Template Maintenance` 到下一个 `## ` 之间的内容 | 删除该段落 |
+| CLAUDE.md 模板专属内容 | `git diff <merge-base> HEAD -- CLAUDE.md` 检查 merge 是否引入模板专属段落（如 `## Project Overview`、`## Strapi Setup` 等描述模板自身而非下游项目的内容） | 展示 diff，与用户确认后删除模板专属段落，保留通用指引（如 `## Customization`） |
+| `.gitignore` 缺少 skill 忽略规则 | `grep -qxF '.claude/skills/template-sync/' .gitignore` 失败 | 追加 `.claude/skills/template-sync/` 到 `.gitignore` |
 
 每项操作结果记录到 report。模板侧新增的其他不明确文件先展示再确认。
 
@@ -72,12 +71,6 @@ description: Use when working in a project created from node-react-template and 
 1. `git add -A`
 2. 生成 commit message：从模板 `package.json` 读取版本号，格式 `chore: sync template v<version>`
 3. 执行 `git commit -m "..."`（不 push）
-4. 更新 `.template-sync` 文件：写入当前 `template/master` 的 commit hash 和日期
-   ```
-   last_synced_commit=<hash>
-   last_synced_at=<YYYY-MM-DD>
-   ```
-5. `git add .template-sync && git commit -m "chore: update template-sync marker"`
 
 ### Phase 6 — Report
 

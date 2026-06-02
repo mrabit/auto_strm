@@ -25,6 +25,7 @@ Usage: node-react-template <command> [options]
 Commands:
   create <name>   从模板创建新项目
   init            给已有项目添加 template remote
+  skill           更新 /template-sync skill 到最新版本
 
 Create options:
   --repo <url>    从 Git 仓库拉取模板（默认用本地目录）
@@ -65,7 +66,16 @@ cmd_create() {
     rsync -a --exclude-from=<(echo "$EXCLUDES" | tr '|' '\n' | sed 's/^/\//') "$TEMPLATE_DIR/" "$name/"
   fi
 
-  # 2) 替换项目名 & 移除模板专属的 bin 字段
+  # 2) 安装 Claude Code skill（git init 之前，确保包含在初始 commit 中）
+  if [[ -d "$TEMPLATE_DIR/.claude/skills" ]]; then
+    mkdir -p "$name/.claude/skills" || die "创建 $name/.claude/skills 失败"
+    cp -r "$TEMPLATE_DIR/.claude/skills/." "$name/.claude/skills/" || die "复制 skill 失败"
+    # 下游项目无需追踪 template-sync skill（仅用于触发同步，用完即删）
+    grep -qxF '.claude/skills/template-sync/' "$name/.gitignore" 2>/dev/null || echo ".claude/skills/template-sync/" >> "$name/.gitignore"
+    ok "已安装 Claude Code skill: /template-sync"
+  fi
+
+  # 3) 替换项目名 & 移除模板专属的 bin 字段
   info "替换项目名为 $name..."
   for f in "$name/package.json" "$name/web/package.json"; do
     [[ -f "$f" ]] && sed -i.bak "s#\"name\": \"node-react-template\"#\"name\": \"$name\"#" "$f" && rm "$f.bak"
@@ -74,22 +84,14 @@ cmd_create() {
     sed -i.bak '/"bin": {/,/}/d' "$name/package.json" && rm "$name/package.json.bak"
   fi
 
-  # 3) git init
+  # 4) git init
   info "初始化 Git..."
   (cd "$name" && git init -q && git add -A && git commit -q --no-verify -m "init: 从 node-react-template 创建")
 
-  # 4) 添加 template remote
+  # 5) 添加 template remote
   local remote_url="${repo:-$TEMPLATE_DIR}"
   (cd "$name" && git remote add template "$remote_url")
   ok "已添加 template remote: $remote_url"
-
-  # 5) 安装 Claude Code skill
-  if [[ -d "$TEMPLATE_DIR/.claude/skills" ]]; then
-    mkdir -p "$name/.claude/skills"
-    cp -r "$TEMPLATE_DIR/.claude/skills/." "$name/.claude/skills/"
-    (cd "$name" && git add .claude/skills/ 2>/dev/null && git commit -q --no-verify -m "chore: 安装 template-sync skill" 2>/dev/null || true)
-    ok "已安装 Claude Code skill: /template-sync"
-  fi
 
   # 6) npm install
   if [[ "$skip_install" == false ]]; then
@@ -139,10 +141,12 @@ cmd_init() {
 
   # 安装 Claude Code skill
   if [[ -d "$TEMPLATE_DIR/.claude/skills" ]]; then
-    mkdir -p .claude/skills
-    cp -r "$TEMPLATE_DIR/.claude/skills/." .claude/skills/
-    git add .claude/skills/ 2>/dev/null || true
-    git commit -q --no-verify -m "chore: 安装 template-sync skill" 2>/dev/null || true
+    mkdir -p .claude/skills || die "创建 .claude/skills 失败"
+    cp -r "$TEMPLATE_DIR/.claude/skills/." .claude/skills/ || die "复制 skill 失败"
+    # 下游项目无需追踪 template-sync skill（仅用于触发同步，用完即删）
+    grep -qxF '.claude/skills/template-sync/' .gitignore 2>/dev/null || echo ".claude/skills/template-sync/" >> .gitignore
+    git rm -r --cached .claude/skills/template-sync/ 2>/dev/null || true
+    git add .gitignore && git commit -q --no-verify -m "chore: update template-sync skill" 2>/dev/null || true
     ok "已安装 Claude Code skill: /template-sync"
   fi
 
@@ -150,12 +154,27 @@ cmd_init() {
   echo "  同步模板更新: /template-sync"
 }
 
+# ─── skill ────────────────────────────────────────────
+cmd_skill() {
+  local skill_src="$TEMPLATE_DIR/.claude/skills"
+  [[ -d "$skill_src" ]] || die "skill 目录不存在: $skill_src"
+
+  mkdir -p .claude/skills || die "创建 .claude/skills 失败"
+  cp -r "$skill_src/." .claude/skills/ || die "复制 skill 失败"
+  grep -qxF '.claude/skills/template-sync/' .gitignore 2>/dev/null || echo ".claude/skills/template-sync/" >> .gitignore
+  # 存量仓库可能已追踪该目录，从索引中移除（本地文件保留）
+  git rm -r --cached .claude/skills/template-sync/ 2>/dev/null || true
+  git add .gitignore && git commit -q --no-verify -m "chore: update template-sync skill" 2>/dev/null || true
+  ok "已更新 Claude Code skill: /template-sync"
+}
+
 # ─── 入口 ────────────────────────────────────────────
 [[ $# -eq 0 ]] && usage
 
 case "${1:-}" in
-  create) shift; cmd_create "$@" ;;
-  init)   shift; cmd_init "$@" ;;
+  create)         shift; cmd_create "$@" ;;
+  init)           shift; cmd_init "$@" ;;
+  skill)          shift; cmd_skill "$@" ;;
   -h|--help|help) usage ;;
-  *)      die "未知命令: $1（运行 --help 查看用法）" ;;
+  *)              die "未知命令: $1（运行 --help 查看用法）" ;;
 esac
