@@ -21,9 +21,9 @@ npm run build:web      # Frontend Vite
 npm run build:all      # Both
 
 # Check & Lint
-npm run check          # Lint + type-check
+npm run check          # Lint + format + type-check
 npm run lint           # ESLint only
-npm run format         # Prettier
+npm run format         # Prettier (write)
 
 # Test
 npm run test           # Vitest (single run)
@@ -80,7 +80,7 @@ docker compose up --build
 
 - Frontend runs on Vite (port 5173) with API proxy to backend (port 3000)
 - Backend uses `tsx watch` for auto-reload during development
-- ESLint flat config with Prettier integration in `eslint.config.mjs`（根目录统一管理，web/ 不再有独立 eslint 配置）
+- ESLint flat config with Prettier integration in `eslint.config.mjs`（根目录统一管理，web/ 不再有独立 eslint 配置；lint / format 命令统一在外层 package.json）
 - TypeScript strict mode enabled in `tsconfig.json`
 - Vitest for testing, test files in `src/__tests__/`
 - `SeriesUpdate` 接口在 `src/db.ts`（后端）和 `web/src/types.ts`（前端）中分别定义，修改字段时需两边同步更新
