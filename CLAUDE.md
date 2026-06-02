@@ -6,10 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Dockerized TypeScript app that syncs media metadata from WebDAV and generates `.strm` files for video files. Runs on a cron schedule. Supports multiple sync tasks with independent configs. Includes an optional web UI (React + Ant Design) for browser-based config management.
 
-## Template source
-
-本项目基于 `/Users/yuany/workspace/docker/node-react-template` 模板创建，当前同步版本：template@1.4.0。模板有更新时，直接对比该目录进行同步。**同步必须逐文件核对，不能遗漏任何基础设施配置；删除文件前必须确认目标配置已完整覆盖其功能。**
-
 ## Commands
 
 ```bash
@@ -22,8 +18,10 @@ npm run dev
 # Dev mode with web UI (backend + frontend HMR, opens on :5173 with API proxy)
 npm run dev:web
 
-# Pre-commit check: lint + type-check — MUST run before committing
-npm run check
+# Check & Lint
+npm run check          # Lint + format + type-check
+npm run lint           # ESLint only
+npm run format         # Prettier (write)
 
 # Type-check and compile backend (used in Docker, no lint)
 npm run build
