@@ -20,12 +20,17 @@ description: Use when working in a project created from node-react-template and 
 ### Phase 2 — Fetch & Analyze
 
 1. `git fetch template master` 拉取模板最新代码
-2. 展示模板自上次同步以来的 commit log：
-   `git log HEAD..template/master --oneline --no-merges`
-3. 按类型分组展示变更文件：
-   - `git diff --name-status HEAD...template/master` 获取文件列表
+2. **确定上次同步点**（按优先级）：
+   - 读取 `.template-sync` 文件中的 `last_synced_commit` 字段
+   - 若文件不存在，解析本地 sync commit message（`git log --grep="sync template" --format="%s" -1`）提取版本号，再通过 `git log template/master --grep="<version>" --format="%H" -1` 找到对应 commit
+   - 若都找不到，用 `HEAD`（退化为原始行为）并提示用户
+3. 以上次同步点为基准，展示增量 commit log：
+   `git log <last_synced_commit>..template/master --oneline --no-merges`
+4. 按类型分组展示变更文件：
+   - `git diff --name-status <last_synced_commit>...template/master` 获取文件列表
    - 分为 Added / Modified / Deleted 三组
-4. 询问用户是否继续合并
+5. 若无新增 commit，提示「已是最新」并退出
+6. 询问用户是否继续合并
 
 ### Phase 3 — Squash Merge
 
@@ -66,6 +71,12 @@ description: Use when working in a project created from node-react-template and 
 1. `git add -A`
 2. 生成 commit message：从模板 `package.json` 读取版本号，格式 `chore: sync template v<version>`
 3. 执行 `git commit -m "..."`（不 push）
+4. 更新 `.template-sync` 文件：写入当前 `template/master` 的 commit hash 和日期
+   ```
+   last_synced_commit=<hash>
+   last_synced_at=<YYYY-MM-DD>
+   ```
+5. `git add .template-sync && git commit -m "chore: update template-sync marker"`
 
 ### Phase 6 — Report
 
