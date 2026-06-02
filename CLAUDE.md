@@ -56,7 +56,6 @@ docker compose up --build
   - `web/src/components/ErrorBoundary.tsx` - 全局错误边界
   - `web/src/components/Sidebar.tsx` - 侧边栏
 - **Hooks**: `web/src/hooks/useResponsive.ts` - 响应式断点 hook
-- **Utils**: `web/src/utils/ansiToHtml.ts` - ANSI 转 HTML
 
 ### Key Patterns
 
@@ -67,6 +66,7 @@ docker compose up --build
 ### Environment Variables
 
 - `NODE_ENV`: `development` or `production`
+- `TZ`: 容器时区 (default: `Asia/Shanghai`)
 - `STRAPI_URL`: Strapi instance URL (default: `http://localhost:1337`)
 - `STRAPI_TOKEN`: Strapi API token for authentication
 
@@ -83,6 +83,11 @@ docker compose up --build
 - ESLint flat config with Prettier integration in `eslint.config.mjs`（根目录统一管理，web/ 不再有独立 eslint 配置）
 - TypeScript strict mode enabled in `tsconfig.json`
 - Vitest for testing, test files in `src/__tests__/`
+- `SeriesUpdate` 接口在 `src/db.ts`（后端）和 `web/src/types.ts`（前端）中分别定义，修改字段时需两边同步更新
+
+### Template Maintenance（仅适用于 node-react-template 仓库自身，下游项目可删除此段）
+
+- 修改 template 代码后按 semver 规则同步更新 `package.json` 和 `web/package.json` 中的 `version`（Breaking → major, Feature → minor, Fix → patch）
 
 ## Customization
 

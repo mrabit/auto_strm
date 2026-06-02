@@ -76,6 +76,7 @@ vi.mock('../db', () => {
 });
 
 import { startServer } from '../server';
+import { restoreConsole } from '../logger';
 
 describe('API Server', () => {
   let server: Awaited<ReturnType<typeof startServer>>['server'];
@@ -98,6 +99,7 @@ describe('API Server', () => {
 
   afterAll(() => {
     close();
+    restoreConsole();
   });
 
   it('GET /api/health returns ok', async () => {
