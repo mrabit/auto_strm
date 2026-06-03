@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Button, Radio, Input, Space, Switch } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
 import { subscribeLogs } from '../api';
+import { ansiToHtml } from '../utils/ansiToHtml';
 import type { LogEntry } from '../types';
 
 const MAX_LOGS = 5000;
@@ -122,7 +123,10 @@ export default function LogViewerPage() {
           filteredLogs.map((entry, i) => (
             <div key={`${entry.timestamp}-${i}`}>
               <span style={{ color: '#666', marginRight: 8 }}>{entry.timestamp}</span>
-              <span style={{ color: LEVEL_COLORS[entry.level] || '#e0e0e0' }}>{entry.message}</span>
+              <span
+                style={{ color: LEVEL_COLORS[entry.level] || '#e0e0e0' }}
+                dangerouslySetInnerHTML={{ __html: ansiToHtml(entry.message) }}
+              />
             </div>
           ))
         )}

@@ -7,7 +7,7 @@ import { syncMetadata, generateStrm } from './syncer';
 import { start } from './scheduler';
 import type { SchedulerHandle } from './scheduler';
 import type { TaskConfig } from './config';
-import { delay, pad, errorMessage } from './utils';
+import { delay, errorMessage } from './utils';
 
 // Capture unhandled exceptions and rejections
 process.on('uncaughtException', (err) => {
@@ -49,10 +49,6 @@ function cyan(s: string) {
 }
 function red(s: string) {
   return C.red + s + C.reset;
-}
-
-function formatTime(d: Date): string {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 async function runTask(task: TaskConfig, overrideRemotePath?: string): Promise<void> {
@@ -123,10 +119,9 @@ async function runTask(task: TaskConfig, overrideRemotePath?: string): Promise<v
       await refreshLibrary(task.jellyfin);
     }
 
-    const endedAt = formatTime(new Date());
     const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
     console.log(
-      `${logPrefix} ${green('done')} ${dim(endedAt)} ${bold(`(${elapsed}s)`)} — metadata: ${green(String(metaDownloaded))} downloaded, ${yellow(String(metaSkipped))} skipped | strm: ${green(String(strmGenerated))} generated, ${yellow(String(strmSkipped))} skipped`,
+      `${logPrefix} ${green('done')} ${bold(`(${elapsed}s)`)} — metadata: ${green(String(metaDownloaded))} downloaded, ${yellow(String(metaSkipped))} skipped | strm: ${green(String(strmGenerated))} generated, ${yellow(String(strmSkipped))} skipped`,
     );
   } catch (err) {
     const msg = errorMessage(err);
