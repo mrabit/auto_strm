@@ -131,36 +131,38 @@ export function startServer(
         data?.transferinfo?.target_diritem?.path || data?.transferinfo?.target_item?.path;
 
       if (targetPath) {
+        // Normalize slashes (e.g. //123云盘/Media//电影 → /123云盘/Media/电影)
+        const normalizedPath = targetPath.replace(/\/+/g, '/');
         let bestMatch: { task: TaskConfig; len: number } | null = null;
         for (const task of allTasks) {
           if (!task.enabled) continue;
           if (
-            targetPath.startsWith(task.remote.path) &&
+            normalizedPath.startsWith(task.remote.path) &&
             task.remote.path.length > (bestMatch?.len ?? -1)
           ) {
             bestMatch = { task, len: task.remote.path.length };
           }
         }
         if (bestMatch) {
-          const timerKey = `${bestMatch.task.name}:${targetPath}`;
+          const timerKey = `${bestMatch.task.name}:${normalizedPath}`;
           const existing = webhookTimers.get(timerKey);
           if (existing) clearTimeout(existing);
 
           const timer = setTimeout(() => {
             webhookTimers.delete(timerKey);
-            schedulerHandle.runNow(bestMatch!.task.name, targetPath);
+            schedulerHandle.runNow(bestMatch!.task.name, normalizedPath);
           }, 60_000);
           webhookTimers.set(timerKey, timer);
 
           const action = existing ? 'replaced' : 'sync_triggered';
           console.log(
-            `[webhook] MoviePilot path "${targetPath}" → task "${bestMatch.task.name}" (delayed 60s${existing ? ', replaced pending' : ''})`,
+            `[webhook] MoviePilot path "${normalizedPath}" → task "${bestMatch.task.name}" (delayed 60s${existing ? ', replaced pending' : ''})`,
           );
           return res.json({
             success: true,
             action,
             task: bestMatch.task.name,
-            path: targetPath,
+            path: normalizedPath,
           });
         }
       }
