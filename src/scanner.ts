@@ -1,5 +1,5 @@
 import type { WebDAVClient } from 'webdav';
-import { delay } from './utils';
+import { delay, errorMessage } from './utils';
 
 export interface MetadataFile {
   remotePath: string;
@@ -38,13 +38,20 @@ export async function scan(
   const videoFiles: VideoFile[] = [];
   let skippedDirs = 0;
 
-  async function walk(dirPath: string, relDir: string): Promise<void> {
+  async function walk(dirPath: string, relDir: string, isRoot = false): Promise<void> {
     let items: DirectoryItem[];
     try {
       items = (await client.getDirectoryContents(dirPath)) as DirectoryItem[];
     } catch (err) {
       const status = (err as { status?: number })?.status;
-      console.warn(`[scanner] skip directory (HTTP ${status ?? '?'}): ${dirPath}`);
+      // Root directory failure is fatal (bad host/path/credentials) — surface it
+      // so the task is marked failed instead of silently reporting "0 files, done".
+      if (isRoot) {
+        throw new Error(`cannot read root directory (HTTP ${status ?? '?'}): ${errorMessage(err)}`);
+      }
+      console.warn(
+        `[scanner] skip directory (HTTP ${status ?? '?'}): ${dirPath} — ${errorMessage(err)}`,
+      );
       skippedDirs++;
       return;
     }
@@ -85,7 +92,7 @@ export async function scan(
     );
   }
 
-  await walk(remotePath, '');
+  await walk(remotePath, '', true);
   if (skippedDirs > 0) {
     console.warn(
       `[scanner] skipped ${skippedDirs} director${skippedDirs === 1 ? 'y' : 'ies'} due to errors`,

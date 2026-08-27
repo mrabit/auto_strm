@@ -93,23 +93,27 @@ async function runTask(task: TaskConfig, overrideRemotePath?: string): Promise<v
 
     let metaDownloaded = 0;
     let metaSkipped = 0;
+    let metaFailed = 0;
 
     if (task.remote.syncMetadata) {
-      const results = await runWithLimit(
+      const { results, failed } = await runWithLimit(
         allMetadata,
         (file) => syncMetadata(client, file, task.local.path),
         task.rateLimit.concurrency,
         task.rateLimit.intervalMs,
+        (file) => file.relativePath,
       );
       metaDownloaded = results.filter((r) => r === 'downloaded').length;
       metaSkipped = results.filter((r) => r === 'skipped').length;
+      metaFailed = failed;
     }
 
-    const strmResults = await runWithLimit(
+    const { results: strmResults, failed: strmFailed } = await runWithLimit(
       allVideos,
       (file) => generateStrm(file, task.remote, task.local.path),
       task.rateLimit.concurrency,
       task.rateLimit.intervalMs,
+      (file) => file.relativePath,
     );
     const strmGenerated = strmResults.filter((r) => r === 'generated').length;
     const strmSkipped = strmResults.filter((r) => r === 'skipped').length;
@@ -120,8 +124,10 @@ async function runTask(task: TaskConfig, overrideRemotePath?: string): Promise<v
     }
 
     const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
+    const metaFail = metaFailed > 0 ? `, ${red(String(metaFailed))} failed` : '';
+    const strmFail = strmFailed > 0 ? `, ${red(String(strmFailed))} failed` : '';
     console.log(
-      `${logPrefix} ${green('done')} ${bold(`(${elapsed}s)`)} — metadata: ${green(String(metaDownloaded))} downloaded, ${yellow(String(metaSkipped))} skipped | strm: ${green(String(strmGenerated))} generated, ${yellow(String(strmSkipped))} skipped`,
+      `${logPrefix} ${green('done')} ${bold(`(${elapsed}s)`)} — metadata: ${green(String(metaDownloaded))} downloaded, ${yellow(String(metaSkipped))} skipped${metaFail} | strm: ${green(String(strmGenerated))} generated, ${yellow(String(strmSkipped))} skipped${strmFail}`,
     );
   } catch (err) {
     const msg = errorMessage(err);
@@ -134,21 +140,29 @@ async function runWithLimit<T, R>(
   fn: (item: T) => Promise<R>,
   concurrency: number,
   intervalMs: number,
-): Promise<R[]> {
+  label: (item: T) => string,
+): Promise<{ results: R[]; failed: number }> {
   const results: R[] = new Array(items.length);
   let index = 0;
+  let failed = 0;
 
   async function worker(): Promise<void> {
     while (index < items.length) {
       const i = index++;
-      results[i] = await fn(items[i]);
+      try {
+        results[i] = await fn(items[i]);
+      } catch (err) {
+        // One bad file (404, timeout, disk full) shouldn't abort the whole batch.
+        failed++;
+        console.warn(`  ${yellow('failed')}: ${label(items[i])} — ${errorMessage(err)}`);
+      }
       if (intervalMs > 0) await delay(intervalMs);
     }
   }
 
   const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
   await Promise.all(workers);
-  return results;
+  return { results, failed };
 }
 
 const lastSyncTimes = new Map<string, string>();
