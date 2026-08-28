@@ -224,6 +224,8 @@ Metadata downloads and strm generation run concurrently within each task. Contro
 - **Scanner traversal**: same-level directories are traversed concurrently via `Promise.all`.
 - **Logger**: uses `splice()` for O(1) bulk eviction instead of `shift()` O(n).
 - **Stream downloads**: `pipeToFile` uses `stream/promises.pipeline()` for automatic error propagation and cleanup.
+- **Idle timeout watchdog**: `pipeToFile` aborts a download if neither the readable's `data` nor the writable's `drain` fires for `IDLE_TIMEOUT_MS` (default 30s). Guards against dead WebDAV connections that silently stall (no `end`, no `error`) and would otherwise hang `pipeline()` — and its `runWithLimit` worker — forever, blocking the whole batch. Listening to `drain` (not just `data`) prevents false-aborts under write backpressure. The aborted download is deleted and counted as a single `failed` item; the batch continues. Accepts an optional `idleTimeoutMs` param (exported for testing). Covered by `src/syncer.test.ts`.
+- **Failure-aware sync time**: `runTask` returns `Promise<boolean>` — `true` on completion (individual file failures tolerated), `false` if it aborted (e.g. root-directory scan threw). `runTaskTracked` only stamps `lastSyncTimes` when `true`, so a failed task never shows a fresh, successful-looking sync time in the UI.
 - **Re-entrance guard**: if a cron trigger fires while the previous run of the same task is still in progress, the new trigger is skipped.
 
 ## API endpoints
@@ -268,6 +270,7 @@ When adding a new config field (e.g. `jellyfin`), update ALL of:
 ## Verification
 
 - `npm run check` — backend only: lint + tsc
+- `npm test` — Vitest unit tests (`*.test.ts` next to source, e.g. `src/syncer.test.ts`); `npm run test:watch` for watch mode
 - `npm run build:web` — frontend type-check + vite build (run separately)
 - Run both before committing frontend changes
 - Fix prettier errors: `npx prettier --write <file>`

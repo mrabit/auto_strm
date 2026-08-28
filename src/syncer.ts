@@ -76,17 +76,53 @@ function buildStrmUrl(relativePath: string, remoteConfig: ResolvedRemoteConfig):
   );
 }
 
-async function pipeToFile(readable: NodeJS.ReadableStream, dest: string): Promise<void> {
+// Abort a download if no data flows for this long. Guards against dead
+// connections where the WebDAV read stream silently stalls — no 'end', no
+// 'error' — leaving pipeline() (and its worker) hung forever.
+const IDLE_TIMEOUT_MS = 30_000;
+
+export async function pipeToFile(
+  readable: NodeJS.ReadableStream,
+  dest: string,
+  idleTimeoutMs: number = IDLE_TIMEOUT_MS,
+): Promise<void> {
   const writable = fs.createWriteStream(dest);
+  const controller = new AbortController();
+
+  // Idle watchdog: reset whenever either end makes progress; fire only after a
+  // full window with no progress on either side. Listening to writable 'drain'
+  // (not just readable 'data') is essential: under backpressure pipeline()
+  // pauses the readable so 'data' stops, but a healthy-but-slow disk keeps
+  // emitting 'drain' as it flushes — without this a slow mount would false-abort.
+  let timer: NodeJS.Timeout | undefined;
+  const resetTimer = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      controller.abort(new Error(`idle timeout after ${idleTimeoutMs}ms`));
+    }, idleTimeoutMs);
+  };
+  readable.on('data', resetTimer);
+  writable.on('drain', resetTimer);
+  resetTimer();
+
   try {
-    await pipeline(readable, writable);
+    await pipeline(readable, writable, { signal: controller.signal });
   } catch (err) {
     try {
       fs.unlinkSync(dest);
     } catch {
       /* best effort */
     }
+    // On abort, pipeline throws a generic AbortError; surface our idle-timeout
+    // reason instead so the failure log is meaningful.
+    if (controller.signal.aborted && controller.signal.reason instanceof Error) {
+      throw controller.signal.reason;
+    }
     throw err;
+  } finally {
+    clearTimeout(timer);
+    readable.off('data', resetTimer);
+    writable.off('drain', resetTimer);
   }
 }
 

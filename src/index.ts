@@ -51,7 +51,11 @@ function red(s: string) {
   return C.red + s + C.reset;
 }
 
-async function runTask(task: TaskConfig, overrideRemotePath?: string): Promise<void> {
+// Returns true if the task ran to completion (individual file failures are
+// tolerated), false if it aborted — e.g. the root directory scan threw. The
+// caller uses this to avoid stamping a fresh, successful-looking sync time on
+// a task that actually failed.
+async function runTask(task: TaskConfig, overrideRemotePath?: string): Promise<boolean> {
   const startedAt = Date.now();
   const logPrefix = cyan(`[${task.name}]`);
   const scanPath = overrideRemotePath || task.remote.path;
@@ -129,9 +133,11 @@ async function runTask(task: TaskConfig, overrideRemotePath?: string): Promise<v
     console.log(
       `${logPrefix} ${green('done')} ${bold(`(${elapsed}s)`)} — metadata: ${green(String(metaDownloaded))} downloaded, ${yellow(String(metaSkipped))} skipped${metaFail} | strm: ${green(String(strmGenerated))} generated, ${yellow(String(strmSkipped))} skipped${strmFail}`,
     );
+    return true;
   } catch (err) {
     const msg = errorMessage(err);
     console.error(`${logPrefix} ${red('error')}:`, msg);
+    return false;
   }
 }
 
@@ -192,8 +198,10 @@ async function main() {
     runningTasks.add(task.name);
     running++;
     try {
-      await runTask(task, overrideRemotePath);
-      lastSyncTimes.set(task.key!, new Date().toISOString());
+      const ok = await runTask(task, overrideRemotePath);
+      // Only stamp a successful sync time when the task actually completed;
+      // a failed run must not look freshly-synced in the UI.
+      if (ok) lastSyncTimes.set(task.key!, new Date().toISOString());
     } finally {
       running--;
       runningTasks.delete(task.name);
