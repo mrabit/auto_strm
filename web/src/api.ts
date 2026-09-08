@@ -40,5 +40,18 @@ export function subscribeLogs(onEntry: (entry: LogEntry) => void): () => void {
       // malformed data, ignore
     }
   };
+  // 连接断开（长任务/网络抖动/代理超时）。EventSource 会自动重连，
+  // 重连后服务端全量回放历史，由调用方按 seq 去重。这里只警告一次，
+  // 避免后端长时间不可用时每次重试都刷控制台。
+  let warned = false;
+  es.onerror = () => {
+    if (!warned) {
+      console.warn('[logs] SSE connection error, will auto-reconnect');
+      warned = true;
+    }
+  };
+  es.onopen = () => {
+    warned = false;
+  };
   return () => es.close();
 }

@@ -1,13 +1,19 @@
 import { pad } from './utils';
 
 export interface LogEntry {
+  boot: number;
+  seq: number;
   timestamp: string;
   level: 'info' | 'warn' | 'error';
   message: string;
 }
 
+// 进程启动标识：seq 仅在同一 boot 内单调。后端重启后 boot 变化，
+// 前端据此识别“换了一代服务端”并重置基线，避免旧高 seq 误杀新日志。
+const BOOT_ID = Date.now();
 const MAX_ENTRIES = 1000;
 const buffer: LogEntry[] = [];
+let seqCounter = 0;
 
 type Listener = (entry: LogEntry) => void;
 const listeners = new Set<Listener>();
@@ -32,7 +38,7 @@ function push(level: LogEntry['level'], args: unknown[]): void {
       }
     })
     .join(' ');
-  buffer.push({ timestamp: fmtTime(new Date()), level, message });
+  buffer.push({ boot: BOOT_ID, seq: seqCounter++, timestamp: fmtTime(new Date()), level, message });
   if (buffer.length > MAX_ENTRIES) buffer.splice(0, buffer.length - MAX_ENTRIES);
   const entry = buffer[buffer.length - 1];
   for (const fn of listeners) {

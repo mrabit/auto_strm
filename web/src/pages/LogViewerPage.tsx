@@ -29,6 +29,16 @@ export default function LogViewerPage() {
     }
     unsubRef.current = subscribeLogs((entry) => {
       setLogs((prev) => {
+        const last = prev[prev.length - 1];
+        if (last) {
+          // 后端重启后 boot 变化 → seq 从 0 重新计数。丢弃旧一代日志，以新一代为准。
+          if (entry.boot !== last.boot) {
+            return entry.boot > last.boot ? [entry] : prev;
+          }
+          // 同一 boot 内 seq 单调递增，数组始终升序。SSE 重连会全量回放历史，
+          // 只接受比末尾更新的条目，旧条目直接丢弃，天然去重。
+          if (entry.seq <= last.seq) return prev;
+        }
         const next = [...prev, entry];
         return next.length > MAX_LOGS ? next.slice(-MAX_LOGS) : next;
       });
@@ -120,8 +130,8 @@ export default function LogViewerPage() {
         {filteredLogs.length === 0 ? (
           <span style={{ color: '#666' }}>暂无日志</span>
         ) : (
-          filteredLogs.map((entry, i) => (
-            <div key={`${entry.timestamp}-${i}`}>
+          filteredLogs.map((entry) => (
+            <div key={`${entry.boot}-${entry.seq}`}>
               <span style={{ color: '#666', marginRight: 8 }}>{entry.timestamp}</span>
               <span
                 style={{ color: LEVEL_COLORS[entry.level] || '#e0e0e0' }}

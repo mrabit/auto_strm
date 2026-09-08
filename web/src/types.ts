@@ -47,6 +47,8 @@ export interface ConfigFile {
 }
 
 export interface LogEntry {
+  boot: number;
+  seq: number;
   timestamp: string;
   level: 'info' | 'warn' | 'error';
   message: string;
