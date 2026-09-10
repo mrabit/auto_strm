@@ -70,12 +70,18 @@ async function runTask(task: TaskConfig, overrideRemotePath?: string): Promise<b
       password: task.remote.password,
     });
 
+    // Directory listing is a lightweight request — it does NOT need the
+    // download throttle (rateLimit.intervalMs), which exists to avoid tripping
+    // the cloud drive's *download* rate limit. Applying a 200ms sleep after
+    // every one of hundreds of listings was the real scan bottleneck (a TV
+    // library with 600+ dirs spent ~60s purely sleeping). Pass intervalMs=0 so
+    // scanning runs at full concurrency; downloads below still honor the throttle.
     const { metadataFiles, videoFiles } = await scan(
       client,
       scanPath,
       task.metaExts,
       task.videoExts,
-      task.rateLimit.intervalMs,
+      0,
       task.rateLimit.concurrency,
     );
 
@@ -106,6 +112,7 @@ async function runTask(task: TaskConfig, overrideRemotePath?: string): Promise<b
         task.rateLimit.concurrency,
         task.rateLimit.intervalMs,
         (file) => file.relativePath,
+        (r) => r !== 'skipped',
       );
       metaDownloaded = results.filter((r) => r === 'downloaded').length;
       metaSkipped = results.filter((r) => r === 'skipped').length;
@@ -118,6 +125,7 @@ async function runTask(task: TaskConfig, overrideRemotePath?: string): Promise<b
       task.rateLimit.concurrency,
       task.rateLimit.intervalMs,
       (file) => file.relativePath,
+      (r) => r !== 'skipped',
     );
     const strmGenerated = strmResults.filter((r) => r === 'generated').length;
     const strmSkipped = strmResults.filter((r) => r === 'skipped').length;
@@ -147,6 +155,7 @@ async function runWithLimit<T, R>(
   concurrency: number,
   intervalMs: number,
   label: (item: T) => string,
+  throttleWhen?: (result: R) => boolean,
 ): Promise<{ results: R[]; failed: number }> {
   const results: R[] = new Array(items.length);
   let index = 0;
@@ -155,14 +164,23 @@ async function runWithLimit<T, R>(
   async function worker(): Promise<void> {
     while (index < items.length) {
       const i = index++;
+      // Only throttle when the item actually hit the network. intervalMs exists
+      // to avoid tripping the cloud drive's download rate limit — but on an
+      // incremental sync the vast majority of files are skipped (already local,
+      // no request made), and sleeping 200ms after each of ~25k skips added up
+      // to ~17min of pure waiting. Skips must not throttle.
+      let throttle = true;
       try {
-        results[i] = await fn(items[i]);
+        const r = await fn(items[i]);
+        results[i] = r;
+        throttle = throttleWhen ? throttleWhen(r) : true;
       } catch (err) {
         // One bad file (404, timeout, disk full) shouldn't abort the whole batch.
+        // A failure likely did make a request, so keep throttling to be safe.
         failed++;
         console.warn(`  ${yellow('failed')}: ${label(items[i])} — ${errorMessage(err)}`);
       }
-      if (intervalMs > 0) await delay(intervalMs);
+      if (throttle && intervalMs > 0) await delay(intervalMs);
     }
   }
 

@@ -202,7 +202,7 @@ CloudDrive2 streaming format: `{base}/static/{proto}/{host}/False{encodedRemoteP
 
 ## Concurrency
 
-Metadata downloads and strm generation run concurrently within each task. Controlled by `rateLimit.concurrency` (default 5). Each worker pauses `rateLimit.intervalMs` (default 200ms) between items to avoid triggering server rate limits.
+Metadata downloads and strm generation run concurrently within each task. Controlled by `rateLimit.concurrency` (default 5). A worker pauses `rateLimit.intervalMs` (default 200ms) after an item **only when it actually hit the network** (a `downloaded`/`generated`/failed result) — `skipped` items (already present locally, no request made) do NOT pause. On an incremental sync where nearly every file is skipped, this is the difference between minutes and seconds: sleeping 200ms after each of ~25k skips previously added ~17min of pure waiting per run. The throttle exists to avoid tripping the cloud drive's download rate limit, so only real requests need it. `runWithLimit` takes an optional `throttleWhen(result)` predicate for this; `scan()` is also called with `intervalMs=0` since directory listing is lightweight and never needs throttling.
 
 ## Key types
 
